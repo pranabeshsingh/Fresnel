@@ -21,3 +21,6 @@ __pycache__/
 
 # Session state
 gw_sessions/
+
+# Wiki synchronization cache
+.wiki_cache/

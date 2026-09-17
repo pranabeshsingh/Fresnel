@@ -3,6 +3,7 @@
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Platform: Qualcomm SDX55](https://img.shields.io/badge/Modem-Qualcomm%20SDX55-orange.svg)](hardware-guides/01-qualcomm-ipa-architecture.md)
 [![5G: SA & NSA](https://img.shields.io/badge/5G-SA%20%7C%20NSA%20(EN--DC)-green.svg)](hardware-guides/02-5g-sa-vs-nsa-and-ca.md)
+[![Wiki: Guides](https://img.shields.io/badge/Wiki-Official%20Documentation-purple.svg)](https://github.com/pranabeshsingh/Fresnel/wiki)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-brightgreen.svg)](server/)
 
 **Fresnel** is a complete, production-tested open-source software suite, embedded web dashboard, and cloud telemetry infrastructure for **Qualcomm Snapdragon X55 (SDXPRAIRIE)** 5G cellular modems and gateways (Tri Cascade SG500M2-X, Quectel RM500Q/RM502Q, Suncomm, and compatible M.2-to-USB/Ethernet platforms). Named after Augustin-Jean Fresnel and the fundamental *Fresnel Zone* of radio propagation.
@@ -98,6 +99,8 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 
 ## 📚 Technical Documentation & Hardware Guides
 
+> 📖 **Official Documentation Wiki**: Comprehensive technical manuals, AT cheatsheets, architecture deep dives, and setup guides are available on the [**Fresnel GitHub Wiki**](https://github.com/pranabeshsingh/Fresnel/wiki) (source markdown files in [`wiki/`](wiki/)).
+
 - [**01. Qualcomm IPA Hardware Routing & Throughput Telemetry**](hardware-guides/01-qualcomm-ipa-architecture.md): Why `/proc/net/dev` drops packets and how baseband QMI WDS telemetry solves it.
 - [**02. 5G SA vs 5G NSA & Carrier Aggregation Guide**](hardware-guides/02-5g-sa-vs-nsa-and-ca.md): 3GPP AT command decoding for Standalone vs EN-DC Dual Connectivity.
 - [**03. Overcoming the USB 2.0 Bottleneck with Raspberry Pi 4**](hardware-guides/03-usb2-bottleneck-and-rpi4.md): Bypassing the 180 Mbps USB 2.0 ceiling using a Pi 4 Gigabit bridge and Linux flowtables.
@@ -137,6 +140,12 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 │   ├── docker-compose.yml          # Container orchestration
 │   └── requirements.txt            # Python dependencies
 │
+├── wiki/                           # Full GitHub Wiki documentation source
+├── scripts/
+│   └── sync_wiki.sh                # Local CLI tool to synchronize wiki to GitHub
+├── .github/
+│   └── workflows/
+│       └── wiki-sync.yml           # Automated CI/CD wiki synchronization
 ├── hardware-guides/                # In-depth engineering guides
 ├── assets/                         # Architecture diagrams & schematics
 ├── .env.example                    # Environment variable template
