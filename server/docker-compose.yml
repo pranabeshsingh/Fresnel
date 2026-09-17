@@ -3,7 +3,7 @@ version: '3.8'
 services:
   telemetry-server:
     build: .
-    container_name: modem-telemetry
+    container_name: zephyrlink-telemetry
     restart: unless-stopped
     ports:
       - "8000:8000"
