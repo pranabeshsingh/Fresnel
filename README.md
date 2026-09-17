@@ -1,11 +1,19 @@
 # Qualcomm Snapdragon X55 (SDX55) 5G Modem Suite & Cloud Telemetry
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Platform: Qualcomm SDX55](https://img.shields.io/badge/Modem-Qualcomm%20SDX55-orange.svg)](hardware-guides/01-qualcomm-ipa-architecture.md)
 [![5G: SA & NSA](https://img.shields.io/badge/5G-SA%20%7C%20NSA%20(EN--DC)-green.svg)](hardware-guides/02-5g-sa-vs-nsa-and-ca.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-brightgreen.svg)](server/)
 
 A complete, production-tested open-source software suite, web dashboard, and cloud telemetry infrastructure for **Qualcomm Snapdragon X55 (SDXPRAIRIE)** 5G cellular modems and gateways (Tri Cascade SG500M2-X, Quectel RM500Q/RM502Q, Suncomm, and compatible M.2-to-USB/Ethernet platforms).
+
+> [!CAUTION]
+> ### ⚠️ Disclaimer & Limitation of Liability
+> This software, documentation, and associated configuration scripts interact directly with cellular modem baseband hardware, serial diagnostic interfaces, and low-level firmware.
+>
+> **The author(s) and contributor(s) are NOT responsible for any issues, data loss, service disruptions, cellular carrier penalties, bricked modems, electrical damage, overheating, or any hardware damages whatsoever that might be caused by or result from the use, misuse, or deployment of the presented code, scripts, AT commands, or documentation.**
+>
+> **You use and execute this project entirely at your own risk.**
 
 ---
 
@@ -132,7 +140,7 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 ├── hardware-guides/                # In-depth engineering guides
 ├── assets/                         # Architecture diagrams & schematics
 ├── .env.example                    # Environment variable template
-└── LICENSE                         # MIT License
+└── LICENSE                         # The Unlicense (Public Domain) + Disclaimer
 ```
 
 ---
@@ -146,6 +154,6 @@ This repository contains sanitized code. When deploying:
 
 ---
 
-## 📄 License
+## 📄 License & Disclaimer
 
-This project is licensed under the [MIT License](LICENSE).
+This project is dedicated to the public domain under the [Unlicense](LICENSE). You are free to copy, modify, and distribute it for any purpose. See [LICENSE](LICENSE) for full legal text and hardware liability disclaimers.
