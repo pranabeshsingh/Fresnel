@@ -143,9 +143,6 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 ├── wiki/                           # Full GitHub Wiki documentation source
 ├── scripts/
 │   └── sync_wiki.sh                # Local CLI tool to synchronize wiki to GitHub
-├── .github/
-│   └── workflows/
-│       └── wiki-sync.yml           # Automated CI/CD wiki synchronization
 ├── hardware-guides/                # In-depth engineering guides
 ├── assets/                         # Architecture diagrams & schematics
 ├── .env.example                    # Environment variable template
