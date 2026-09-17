@@ -24,3 +24,6 @@ gw_sessions/
 
 # Wiki synchronization cache
 .wiki_cache/
+
+# Local planning and specs
+docs/superpowers/
