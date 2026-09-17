@@ -2,15 +2,15 @@
 set -e
 
 # ==============================================================================
-# ZephyrLink 5G Suite - Automated Deployer
-# Deploys ZephyrLink web GUI, telemetry daemon, and cellular tools over SSH
+# Fresnel 5G Suite - Automated Deployer
+# Deploys Fresnel web GUI, telemetry daemon, and cellular tools over SSH
 # ==============================================================================
 
 MODEM_IP="${1:-172.16.10.1}"
 SSH_USER="${2:-root}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "=== Deploying ZephyrLink 5G Suite to ${SSH_USER}@${MODEM_IP} ==="
+echo "=== Deploying Fresnel 5G Suite to ${SSH_USER}@${MODEM_IP} ==="
 
 SSH_OPTS="-o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 

@@ -1,11 +1,11 @@
-# ZephyrLink — 5G Cellular Gateway Suite & Cloud Telemetry
+# Fresnel — 5G Cellular Gateway Suite & Cloud Telemetry
 
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Platform: Qualcomm SDX55](https://img.shields.io/badge/Modem-Qualcomm%20SDX55-orange.svg)](hardware-guides/01-qualcomm-ipa-architecture.md)
 [![5G: SA & NSA](https://img.shields.io/badge/5G-SA%20%7C%20NSA%20(EN--DC)-green.svg)](hardware-guides/02-5g-sa-vs-nsa-and-ca.md)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-brightgreen.svg)](server/)
 
-**ZephyrLink** is a complete, production-tested open-source software suite, embedded web dashboard, and cloud telemetry infrastructure for **Qualcomm Snapdragon X55 (SDXPRAIRIE)** 5G cellular modems and gateways (Tri Cascade SG500M2-X, Quectel RM500Q/RM502Q, Suncomm, and compatible M.2-to-USB/Ethernet platforms).
+**Fresnel** is a complete, production-tested open-source software suite, embedded web dashboard, and cloud telemetry infrastructure for **Qualcomm Snapdragon X55 (SDXPRAIRIE)** 5G cellular modems and gateways (Tri Cascade SG500M2-X, Quectel RM500Q/RM502Q, Suncomm, and compatible M.2-to-USB/Ethernet platforms). Named after Augustin-Jean Fresnel and the fundamental *Fresnel Zone* of radio propagation.
 
 > [!CAUTION]
 > ### ⚠️ Disclaimer & Limitation of Liability
