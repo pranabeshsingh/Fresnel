@@ -1,0 +1,5 @@
+# Telemetry Pusher Configuration
+# Place this file on the modem at: /data/simpleadmin/telemetry.conf
+
+TELEMETRY_BASE_URL="https://your-vps-domain.com"
+TELEMETRY_TOKEN="your_telemetry_secret_token"

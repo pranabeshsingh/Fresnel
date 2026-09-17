@@ -1,0 +1,21 @@
+#!/bin/sh
+TOKEN=$(echo "$QUERY_STRING" | grep -o 'token=[^&]*' | cut -d'=' -f2)
+
+if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+    echo "Status: 401 Unauthorized"
+    echo "Content-type: application/json"
+    echo "Cache-Control: no-cache"
+    echo ""
+    echo '{"status":"error","message":"Unauthorized"}'
+    exit 0
+fi
+
+echo "Content-type: application/json"
+echo "Cache-Control: no-cache"
+echo ""
+
+if [ -f "/tmp/dashboard_data.json" ]; then
+    cat /tmp/dashboard_data.json
+else
+    /usrdata/simpleadmin/scripts/get_dashboard_data.pl
+fi

@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  telemetry-server:
+    build: .
+    container_name: modem-telemetry
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AUTH_TOKEN=change_this_telemetry_token
+      - DASHBOARD_PASSWORD=admin
+      # Uncomment below to switch to Oracle Autonomous Database:
+      # - ORACLE_DB_USER=admin
+      # - ORACLE_DB_PASS=your_oracle_password
+      # - ORACLE_DB_DSN=your_db_service_low
+      # - ORACLE_WALLET_DIR=/app/wallet
+      # - ORACLE_WALLET_PASS=your_wallet_password
+    volumes:
+      - ./data:/app/data
+      - ./wallet:/app/wallet:ro
+    # To run Oracle mode instead, change command:
+    # command: ["python", "server_oracle.py"]

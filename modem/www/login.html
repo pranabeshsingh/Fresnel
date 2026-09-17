@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <!-- Liquid Glass 5G Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233b82f6'/%3E%3Cstop offset='50%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='2' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%2307090e'/%3E%3Crect width='62' height='62' x='1' y='1' rx='15' fill='none' stroke='url(%23g)' stroke-width='2' opacity='0.8'/%3E%3Ccircle cx='32' cy='46' r='4' fill='%2310b981' filter='url(%23glow)'/%3E%3Cpath d='M20 38 A16 16 0 0 1 44 38' fill='none' stroke='%233b82f6' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M13 30 A26 26 0 0 1 51 30' fill='none' stroke='%238b5cf6' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M6 22 A36 36 0 0 1 58 22' fill='none' stroke='%23ec4899' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg: #06080e;
+            --liquid-glass: rgba(18, 24, 38, 0.45);
+            --liquid-border: rgba(255, 255, 255, 0.1);
+            --liquid-highlight: rgba(255, 255, 255, 0.16);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --radius: 24px;
+            --shadow-glass: 0 25px 60px -10px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .liquid-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.55;
+            animation: orbFloat 18s ease-in-out infinite alternate;
+        }
+
+        .orb-1 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.3), transparent 70%);
+            bottom: -100px;
+            right: -100px;
+        }
+
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, -20px) scale(1.06); }
+            100% { transform: translate(-20px, 25px) scale(0.96); }
+        }
+
+        .login-card {
+            background: var(--liquid-glass);
+            border: 1px solid var(--liquid-border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(32px) saturate(200%);
+            -webkit-backdrop-filter: blur(32px) saturate(200%);
+            box-shadow: var(--shadow-glass);
+            width: 100%;
+            max-width: 360px;
+            padding: 32px 28px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--liquid-highlight), transparent);
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--liquid-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.25s ease;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.06);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .input-field::placeholder {
+            color: var(--text-muted);
+            letter-spacing: normal;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 16px var(--primary-glow);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-login {
+            width: 100%;
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 8px 24px var(--primary-glow);
+            position: relative;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 14px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="liquid-orb orb-1"></div>
+    <div class="liquid-orb orb-2"></div>
+
+    <div class="login-card">
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <input type="password" id="password" class="input-field" placeholder="Password" autofocus required>
+            </div>
+
+            <button type="submit" class="btn-login" id="btn-submit">Login</button>
+            <div class="error-msg" id="error-msg">Invalid password. Please try again.</div>
+        </form>
+    </div>
+
+    <script>
+        // Check if already authenticated
+        const existingToken = localStorage.getItem('gw_auth_token');
+        if (existingToken) {
+            fetch(`/cgi-bin/auth?action=check&token=${existingToken}&t=` + Date.now())
+                .then(r => r.json())
+                .then(d => {
+                    if (d.status === 'ok') {
+                        window.location.replace('/index.html');
+                    }
+                }).catch(() => {});
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const pwd = document.getElementById('password').value;
+            const btn = document.getElementById('btn-submit');
+            const err = document.getElementById('error-msg');
+
+            btn.textContent = 'Verifying...';
+            btn.disabled = true;
+            err.style.display = 'none';
+
+            try {
+                const res = await fetch('/cgi-bin/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=login&password=${encodeURIComponent(pwd)}`
+                });
+                const data = await res.json();
+
+                if (data.status === 'ok' && data.token) {
+                    localStorage.setItem('gw_auth_token', data.token);
+                    window.location.replace('/index.html');
+                } else {
+                    err.textContent = data.message || 'Invalid password. Please try again.';
+                    err.style.display = 'block';
+                    btn.textContent = 'Login';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                err.textContent = 'Error connecting to gateway.';
+                err.style.display = 'block';
+                btn.textContent = 'Login';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+#!/bin/sh
+echo "Content-type: text/plain"
+echo "Cache-Control: no-cache"
+echo ""
+
+QUERY_STRING=$(echo "${QUERY_STRING}" | sed 's/;//g')
+CMD=""
+TOKEN=""
+if [ -n "${QUERY_STRING}" ]; then
+    export IFS="&"
+    for param in ${QUERY_STRING}; do
+        key=$(echo "$param" | awk -F '=' '{print $1}')
+        val=$(echo "$param" | awk -F '=' '{print $2}')
+        if [ "$key" = "atcmd" ]; then
+            CMD=$(echo "$val" | sed 's/+/ /g; s/%20/ /g; s/%22/\"/g; s/%3D/=/g; s/%3F/?/g; s/%2B/+/g')
+        elif [ "$key" = "token" ]; then
+            TOKEN="$val"
+        fi
+    done
+fi
+
+if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+    echo "ERROR: Unauthorized"
+    exit 0
+fi
+
+if [ -n "$CMD" ]; then
+    /usrdata/simpleadmin/scripts/doAT.py "$CMD"
+else
+    echo "ERROR: No command provided"
+fi

@@ -1,0 +1,2732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <title>5G Modem • Cloud Hub</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
+    <script src="/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #080c14;
+            --bg-card: rgba(15, 23, 42, 0.75);
+            --bg-card-hover: rgba(22, 33, 58, 0.85);
+            --border-card: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(56, 189, 248, 0.3);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.3);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(15, 23, 42, 0.6) 0px, transparent 100%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding: 16px 16px 36px 16px;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* Lock / Login Screen */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(8, 12, 20, 0.94); backdrop-filter: blur(20px);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
+        }
+        .auth-card {
+            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border-glow);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(56, 189, 248, 0.2);
+            border-radius: 20px; padding: 36px 32px; width: 100%; max-width: 440px; text-align: center;
+        }
+        .auth-icon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: linear-gradient(135deg, #0284c7, #10b981);
+            display: inline-flex; align-items: center; justify-content: center; font-size: 26px;
+            margin-bottom: 20px; box-shadow: 0 8px 20px rgba(56, 189, 248, 0.35);
+        }
+        .auth-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: #fff; }
+        .auth-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+        .auth-input-wrap { margin-bottom: 20px; }
+        .auth-input {
+            width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-card); border-radius: 12px;
+            color: #fff; font-family: var(--font-mono); font-size: 14px; text-align: center;
+            outline: none; transition: all 0.2s ease;
+        }
+        .auth-input:focus { border-color: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
+        .auth-btn {
+            width: 100%; padding: 14px; background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 16px rgba(14, 165, 233, 0.35);
+        }
+        .auth-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+        .auth-error { color: var(--danger); font-size: 12px; margin-top: 12px; display: none; font-weight: 600; }
+
+        /* Main Header */
+        header {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+            margin-bottom: 16px; padding: 14px 20px; background: var(--bg-card); backdrop-filter: blur(16px);
+            border: 1px solid var(--border-card); border-radius: 16px;
+        }
+
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-logo {
+            width: 40px; height: 40px; background: linear-gradient(135deg, #0284c7, #10b981);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+        }
+        .brand-title h1 {
+            font-size: 17px; font-weight: 800; letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .brand-title p { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+
+        .header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .live-status {
+            display: flex; align-items: center; gap: 8px; padding: 5px 12px;
+            background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 9999px; font-size: 11px; font-weight: 600; color: #34d399;
+        }
+        .live-status.offline { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: #f87171; }
+        .pulse-dot {
+            width: 7px; height: 7px; background: #34d399; border-radius: 50%;
+            box-shadow: 0 0 8px #34d399; animation: pulse 1.8s infinite;
+        }
+        .live-status.offline .pulse-dot { background: #f87171; box-shadow: 0 0 8px #f87171; animation: none; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+
+        .btn-lock {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card);
+            color: var(--text-muted); border-radius: 8px; padding: 5px 10px; font-size: 11px;
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-lock:hover { color: #fff; border-color: var(--primary); }
+
+        /* Top Navigation Tabs Bar */
+        .tabs-nav {
+            display: flex; gap: 8px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 4px;
+        }
+        .tab-btn {
+            background: var(--bg-card); border: 1px solid var(--border-card);
+            color: var(--text-muted); padding: 8px 16px; border-radius: 12px; font-size: 12px;
+            font-weight: 700; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px;
+            white-space: nowrap; backdrop-filter: blur(12px);
+        }
+        .tab-btn:hover { color: #fff; border-color: var(--primary-glow); }
+        .tab-btn.active {
+            background: rgba(56, 189, 248, 0.15); color: #fff; border-color: var(--primary);
+            box-shadow: 0 2px 12px rgba(56, 189, 248, 0.25);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* KPI Cards Grid */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .glass-card {
+            background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-card);
+            border-radius: 14px; padding: 16px; transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .glass-card:hover { border-color: var(--border-glow); transform: translateY(-2px); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .card-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+        .card-badge {
+            font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
+            background: rgba(56, 189, 248, 0.12); color: var(--primary); border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+        .card-badge.green { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+        .card-badge.purple { background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.25); }
+        .card-val { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; font-family: var(--font-mono); margin-bottom: 6px; word-break: break-all; }
+        .card-sub { font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+
+        /* Charts Grid */
+        .charts-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 18px; }
+        @media (max-width: 960px) { .charts-grid { grid-template-columns: 1fr; } }
+        .chart-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-card); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; }
+        .chart-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .chart-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: #fff; }
+        .chart-container { position: relative; height: 210px; width: 100%; }
+
+        .btn-range-group { display: flex; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-card); border-radius: 8px; padding: 2px; }
+        .btn-range {
+            background: transparent; border: none; color: var(--text-muted); padding: 4px 8px;
+            border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-range:hover { color: #fff; }
+        .btn-range.active { background: var(--primary); color: #080c14; font-weight: 700; }
+
+        /* Tables Grid Side-by-Side */
+        .tables-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 18px; }
+        @media (max-width: 1024px) { .tables-grid { grid-template-columns: 1fr; } }
+
+        .table-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-card); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .table-title { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: #fff; }
+        .table-wrap { overflow-x: auto; flex: 1; min-height: 190px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        th { padding: 8px 10px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-card); white-space: nowrap; }
+        td { padding: 9px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); }
+        .pill-active { display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px; font-weight: 600; }
+        .pill-history { display: inline-block; padding: 2px 6px; border-radius: 4px; background: rgba(148, 163, 184, 0.15); color: #94a3b8; font-size: 10px; font-weight: 600; }
+        .pill-badge { display: inline-block; padding: 2px 7px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); color: var(--primary); font-size: 10px; font-weight: 600; }
+        .pill-warn { display: inline-block; padding: 2px 7px; border-radius: 4px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10px; font-weight: 600; }
+        .pill-crit { display: inline-block; padding: 2px 7px; border-radius: 4px; background: rgba(239, 68, 68, 0.15); color: #f87171; font-size: 10px; font-weight: 600; }
+
+        /* Pagination Bar */
+        .pagination-bar {
+            display: flex; justify-content: space-between; align-items: center; padding-top: 12px;
+            margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.05); font-size: 11px;
+        }
+        .pagination-controls { display: flex; align-items: center; gap: 6px; }
+        .btn-page {
+            background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-card);
+            color: var(--text-muted); padding: 3px 8px; border-radius: 5px; font-size: 10px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+        }
+        .btn-page:hover:not(:disabled) { color: #fff; border-color: var(--primary); background: rgba(56, 189, 248, 0.1); }
+        .btn-page:disabled { opacity: 0.25; cursor: not-allowed; }
+        .page-indicator { font-family: var(--font-mono); color: #cbd5e1; font-size: 11px; font-weight: 600; padding: 0 4px; }
+
+        /* Console / Band Locker Styles */
+        .presets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+        .btn-preset {
+            background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-card); color: #fff;
+            padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; text-align: left;
+            cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 4px;
+        }
+        .btn-preset span { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); font-weight: 400; }
+        .btn-preset:hover { border-color: var(--primary); background: rgba(56, 189, 248, 0.08); transform: translateY(-1px); }
+
+        .terminal-box {
+            background: #04060a; border: 1px solid var(--border-card); border-radius: 12px;
+            padding: 14px; font-family: var(--font-mono); font-size: 12px; color: #38bdf8;
+            height: 240px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 12px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+        }
+        .cmd-bar { display: flex; gap: 10px; }
+        .cmd-input {
+            flex: 1; padding: 10px 14px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-card);
+            border-radius: 10px; color: #fff; font-family: var(--font-mono); font-size: 13px; outline: none;
+        }
+        .cmd-input:focus { border-color: var(--primary); }
+        .cmd-btn {
+            padding: 10px 20px; background: linear-gradient(135deg, #0284c7, #0ea5e9); border: none;
+            border-radius: 10px; color: #fff; font-weight: 700; font-size: 12px; cursor: pointer;
+        }
+        .cmd-btn:hover { opacity: 0.95; }
+
+        /* Forms */
+        .form-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .form-input {
+            flex: 1; padding: 9px 12px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-card);
+            border-radius: 8px; color: #fff; font-size: 12px; outline: none; min-width: 140px;
+        }
+        .form-input:focus { border-color: var(--primary); }
+        .form-btn {
+            padding: 9px 16px; background: rgba(56, 189, 248, 0.15); border: 1px solid var(--primary);
+            color: var(--primary); border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .form-btn:hover { background: var(--primary); color: #080c14; }
+
+        footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <!-- Unlock / Password Overlay -->
+    <div id="auth-overlay">
+        <div class="auth-card">
+            <div class="auth-icon">🔒</div>
+            <h2>Modem Telemetry Hub</h2>
+            <p>Access is protected. Please enter your dashboard UUID key to authenticate.</p>
+            <div class="auth-input-wrap">
+                <input type="password" id="auth-password-input" class="auth-input" placeholder="Enter UUID Password" autocomplete="current-password" spellcheck="false" />
+            </div>
+            <button class="auth-btn" onclick="submitAuth()">Unlock Dashboard</button>
+            <div class="auth-error" id="auth-error-msg">Invalid password key. Please verify and retry.</div>
+        </div>
+    </div>
+
+    <div class="container" id="main-app">
+        <!-- Header -->
+        <header>
+            <div class="brand">
+                <div class="brand-logo">📡</div>
+                <div class="brand-title">
+                    <h1 id="hdr-title">5G Modem • Cloud Hub</h1>
+                    <p><span id="hdr-model">5G Modem</span> • <span id="hdr-carrier">Detecting Carrier...</span> • <span id="hdr-uptime" style="color: #38bdf8; font-weight: 600;">Uptime: --</span></p>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                        <span>📡 Modem → VPS: <b id="hdr-modem-sync" style="color: #34d399; font-family: var(--font-mono);">--</b></span>
+                        <span>💻 VPS → Browser: <b id="hdr-client-sync" style="color: #38bdf8; font-family: var(--font-mono);">--</b></span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <div class="live-status offline" id="badge-stream-status">
+                        <div class="pulse-dot"></div>
+                        <span id="txt-stream-status">Connecting...</span>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-mono);">
+                        Sync: <span id="hdr-sync-age" style="color: #34d399; font-weight: 600;">--</span>
+                    </div>
+                </div>
+                <button class="btn-lock" onclick="lockSession()" title="Lock Session">🔒 Lock</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('telemetry')">📊 Telemetry & KPIs</button>
+            <button class="tab-btn" onclick="switchTab('dns')">🛡️ DNS & Ad-Block</button>
+            <button class="tab-btn" onclick="switchTab('console')">⚡ AT Console & Band Locker</button>
+            <button class="tab-btn" onclick="switchTab('sms')">💬 Cloud SMS & USSD</button>
+            <button class="tab-btn" onclick="switchTab('alerts')">🚨 Alerts & Telegram</button>
+            <button class="tab-btn" onclick="switchTab('backups')">💾 Cloud Backups</button>
+        </div>
+
+        <!-- TAB 1: TELEMETRY & KPIS -->
+        <div id="tab-telemetry" class="tab-content active">
+            <!-- SIM PIN / PUK / Auto-unlock Warning Banner -->
+            <div id="vps-sim-alert-banner" style="display: none; padding: 12px 18px; margin-bottom: 18px; border-radius: 12px; font-size: 13px; line-height: 1.5; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid rgba(251, 146, 60, 0.4); background: rgba(251, 146, 60, 0.15);">
+                <div id="vps-sim-alert-text" style="display: flex; align-items: center; gap: 10px; font-size: 13px;"></div>
+                <div id="vps-sim-alert-actions" style="display: flex; gap: 8px;"></div>
+            </div>
+
+            <!-- KPI Cards Grid -->
+            <div class="cards-grid">
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">📶 5G SA Signal</span>
+                        <span class="card-badge" id="kpi-signal-badge">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-rsrp">--</div>
+                    <div class="card-sub">
+                        <span>SINR: <b id="kpi-sinr" style="color: #34d399;">--</b></span>
+                        <span>RSRQ: <b id="kpi-rsrq">--</b></span>
+                        <span>CSQ: <b id="kpi-csq">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌐 Active Public IP</span>
+                        <span class="card-badge purple" id="kpi-ip-type">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-public-ip" style="font-size: 14px; font-weight: 700; color: #38bdf8; padding-top: 4px;">--</div>
+                    <div class="card-sub" style="margin-top: 6px;">
+                        <span>Carrier: <b id="kpi-carrier-name">--</b></span>
+                        <span>Interface: <b id="kpi-interface">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⚡ Live Throughput</span>
+                        <span class="card-badge green" id="kpi-net-type">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-speed-dl" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>Upload: <b id="kpi-speed-ul" style="color: #34d399;">--</b></span>
+                        <span>Band: <b id="kpi-band">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">📊 Data Usage</span>
+                        <span class="card-badge" id="kpi-usage-badge">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-usage-today">--</div>
+                    <div class="card-sub">
+                        <span style="color: #34d399;">↓ <b id="kpi-usage-today-dl">--</b></span>
+                        <span style="color: #38bdf8;">↑ <b id="kpi-usage-today-ul">--</b></span>
+                        <span>Month: <b id="kpi-usage-month">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌡️ Thermals & System</span>
+                        <span class="card-badge" id="kpi-system-health">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-temp-modem">--</div>
+                    <div class="card-sub">
+                        <span>CPU: <b id="kpi-temp-cpu">--</b></span>
+                        <span>Uptime: <b id="kpi-uptime" style="color: #38bdf8;">--</b></span>
+                        <span>RAM: <b id="kpi-ram">--</b></span>
+                    </div>
+                    <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                        <span>Modem Sync: <b id="kpi-modem-push" style="color: #34d399;">--</b></span>
+                        <span>Client Sync: <b id="kpi-client-push" style="color: #38bdf8;">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⚡ Ping & Latency</span>
+                        <span class="card-badge" id="kpi-link-badge">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-ping-vps" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>Cloudflare: <b id="kpi-ping-cf" style="color: #34d399;">--</b></span>
+                        <span>Google: <b id="kpi-ping-gg" style="color: #f59e0b;">--</b></span>
+                        <span>Host: <b id="kpi-host-ip">--</b></span>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🔌 Active Connections & Ports</span>
+                        <span class="card-badge green" id="kpi-conn-badge">Optimal</span>
+                    </div>
+                    <div class="card-val" id="kpi-conn-total" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>TCP: <b id="kpi-conn-tcp" style="color: #34d399;">--</b></span>
+                        <span>UDP: <b id="kpi-conn-udp" style="color: #f59e0b;">--</b></span>
+                        <span>State: <b id="kpi-conn-state" style="color: #38bdf8;">Tracking</b></span>
+                    </div>
+                    <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                        <span>Top Flow: <b id="kpi-conn-top-port" style="color: #c084fc;">--</b></span>
+                        <span>Modem Ports: <b id="kpi-modem-open-ports" style="color: #34d399;">4 Protected</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphs with Range Switcher -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+                <div class="btn-range-group">
+                    <button class="btn-range active" onclick="setRange('1h')">1H</button>
+                    <button class="btn-range" onclick="setRange('6h')">6H</button>
+                    <button class="btn-range" onclick="setRange('24h')">24H</button>
+                    <button class="btn-range" onclick="setRange('7d')">7D</button>
+                    <button class="btn-range" onclick="setRange('30d')">30D</button>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <span class="chart-title">📶 5G SA Signal Quality (RSRP & SINR)</span>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-signal"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <span class="chart-title">⚡ Network Bandwidth (Download & Upload Mbps)</span>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-bandwidth"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <span class="chart-title">⏱️ Latency (Modem ↔ VPS, Cloudflare & Google)</span>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-latency"></canvas></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <span class="chart-title">💻 System Resources (CPU & RAM Load)</span>
+                    </div>
+                    <div class="chart-container"><canvas id="chart-resources"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Paginated Tables Side-by-Side -->
+            <div class="tables-grid">
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">🌐 Public & Carrier IP History</span>
+                        <span class="pill-badge" id="ip-count-badge">0 Total</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>IP Address</th><th>Type</th><th>Last Seen</th><th>Hits</th></tr>
+                            </thead>
+                            <tbody id="tbl-ips-body">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading IP history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <span style="color: var(--text-muted);">5 items / page</span>
+                        <div class="pagination-controls">
+                            <button class="btn-page" id="btn-ip-prev" onclick="changeIPPage(-1)" disabled>◀ Prev</button>
+                            <span class="page-indicator" id="ip-page-info">1 / 1</span>
+                            <button class="btn-page" id="btn-ip-next" onclick="changeIPPage(1)" disabled>Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">🗼 Connected gNodeB Towers</span>
+                        <span class="pill-badge" id="tower-count-badge">0 Total</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>gNodeB</th><th>CID</th><th>Band</th><th>Best SINR</th><th>Hits</th><th>Last Seen</th></tr>
+                            </thead>
+                            <tbody id="tbl-towers-body">
+                                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading cell tower history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <span style="color: var(--text-muted);">5 items / page</span>
+                        <div class="pagination-controls">
+                            <button class="btn-page" id="btn-towers-prev" onclick="changeTowersPage(-1)" disabled>◀ Prev</button>
+                            <span class="page-indicator" id="towers-page-info">1 / 1</span>
+                            <button class="btn-page" id="btn-towers-next" onclick="changeTowersPage(1)" disabled>Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Data Usage Ledger Table -->
+            <div class="table-card" style="margin-top: 16px;">
+                <div class="table-header">
+                    <span class="table-title">📊 Daily Data Usage & Bandwidth Ledger</span>
+                    <span class="pill-badge" id="usage-count-badge">0 Days Logged</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Date</th><th>Download (↓)</th><th>Upload (↑)</th><th>Total Data Used</th><th>Peak DL Speed</th><th>Peak UL Speed</th><th>Last Recorded</th></tr>
+                        </thead>
+                        <tbody id="tbl-usage-body">
+                            <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Gathering daily usage metrics from modem...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <span style="color: var(--text-muted);">5 items / page</span>
+                    <div class="pagination-controls">
+                        <button class="btn-page" id="btn-usage-prev" onclick="changeUsagePage(-1)" disabled>◀ Prev</button>
+                        <span class="page-indicator" id="usage-page-info">1 / 1</span>
+                        <button class="btn-page" id="btn-usage-next" onclick="changeUsagePage(1)" disabled>Next ▶</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Periodic Usage Summaries (This Month, Last Month, This Year, Last Year) -->
+            <div class="table-card" style="margin-top: 16px;">
+                <div class="table-header">
+                    <span class="table-title">📈 Cumulative Usage Summaries (Month & Year Aggregates)</span>
+                    <span class="pill-badge" id="summary-active-badge">Aggregated Data</span>
+                </div>
+                
+                <!-- 4 KPI Summary Cards Grid -->
+                <div class="cards-grid" style="margin: 14px 14px 10px 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <!-- This Month Card -->
+                    <div class="glass-card" style="background: rgba(56, 189, 248, 0.04); border-color: rgba(56, 189, 248, 0.25);">
+                        <div class="card-header">
+                            <span class="card-lbl">📅 This Month</span>
+                            <span class="card-badge" id="sum-this-month-badge">Current</span>
+                        </div>
+                        <div class="card-val" id="sum-this-month-total" style="color: #38bdf8; font-size: 19px;">--</div>
+                        <div class="card-sub">
+                            <span style="color: #34d399;">↓ DL: <b id="sum-this-month-dl">--</b></span>
+                            <span style="color: #38bdf8;">↑ UL: <b id="sum-this-month-ul">--</b></span>
+                        </div>
+                        <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                            <span>Peak DL: <b id="sum-this-month-peak" style="color: var(--text-muted);">--</b></span>
+                            <span id="sum-this-month-days" style="color: var(--text-muted);">0 days</span>
+                        </div>
+                    </div>
+
+                    <!-- Last Month Card -->
+                    <div class="glass-card" style="background: rgba(168, 85, 247, 0.04); border-color: rgba(168, 85, 247, 0.25);">
+                        <div class="card-header">
+                            <span class="card-lbl">⏮️ Last Month</span>
+                            <span class="card-badge purple" id="sum-last-month-badge">Previous</span>
+                        </div>
+                        <div class="card-val" id="sum-last-month-total" style="color: #c084fc; font-size: 19px;">--</div>
+                        <div class="card-sub">
+                            <span style="color: #34d399;">↓ DL: <b id="sum-last-month-dl">--</b></span>
+                            <span style="color: #38bdf8;">↑ UL: <b id="sum-last-month-ul">--</b></span>
+                        </div>
+                        <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                            <span>Peak DL: <b id="sum-last-month-peak" style="color: var(--text-muted);">--</b></span>
+                            <span id="sum-last-month-days" style="color: var(--text-muted);">0 days</span>
+                        </div>
+                    </div>
+
+                    <!-- This Year Card -->
+                    <div class="glass-card" style="background: rgba(52, 211, 153, 0.04); border-color: rgba(52, 211, 153, 0.25);">
+                        <div class="card-header">
+                            <span class="card-lbl">🗓️ This Year</span>
+                            <span class="card-badge green" id="sum-this-year-badge">Annual</span>
+                        </div>
+                        <div class="card-val" id="sum-this-year-total" style="color: #34d399; font-size: 19px;">--</div>
+                        <div class="card-sub">
+                            <span style="color: #34d399;">↓ DL: <b id="sum-this-year-dl">--</b></span>
+                            <span style="color: #38bdf8;">↑ UL: <b id="sum-this-year-ul">--</b></span>
+                        </div>
+                        <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                            <span>Peak DL: <b id="sum-this-year-peak" style="color: var(--text-muted);">--</b></span>
+                            <span id="sum-this-year-days" style="color: var(--text-muted);">0 days</span>
+                        </div>
+                    </div>
+
+                    <!-- Last Year Card -->
+                    <div class="glass-card" style="background: rgba(251, 146, 60, 0.04); border-color: rgba(251, 146, 60, 0.25);">
+                        <div class="card-header">
+                            <span class="card-lbl">⏳ Last Year</span>
+                            <span class="card-badge" style="background: rgba(251, 146, 60, 0.12); color: #fb923c; border-color: rgba(251, 146, 60, 0.25);" id="sum-last-year-badge">Archive</span>
+                        </div>
+                        <div class="card-val" id="sum-last-year-total" style="color: #fb923c; font-size: 19px;">--</div>
+                        <div class="card-sub">
+                            <span style="color: #34d399;">↓ DL: <b id="sum-last-year-dl">--</b></span>
+                            <span style="color: #38bdf8;">↑ UL: <b id="sum-last-year-ul">--</b></span>
+                        </div>
+                        <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                            <span>Peak DL: <b id="sum-last-year-peak" style="color: var(--text-muted);">--</b></span>
+                            <span id="sum-last-year-days" style="color: var(--text-muted);">0 days</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparative Ledger Table -->
+                <div class="table-wrap" style="border-top: 1px solid var(--border-card);">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time Period</th>
+                                <th>Download (↓)</th>
+                                <th>Upload (↑)</th>
+                                <th>Total Data Used</th>
+                                <th>Peak DL Speed</th>
+                                <th>Peak UL Speed</th>
+                                <th>Active Days Logged</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl-summary-body">
+                            <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 16px;">Calculating periodic aggregates...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Downtime History Table -->
+            <div class="table-card" style="margin-top: 16px;">
+                <div class="table-header">
+                    <span class="table-title">⏱️ Router Power-Off & Downtime Log</span>
+                    <span class="pill-badge" id="downtime-count-badge">0 Recorded</span>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Offline Since</th><th>Reconnected At</th><th>Total Downtime</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="tbl-downtimes-body">
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">No downtime recorded.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <span style="color: var(--text-muted);">5 items / page</span>
+                    <div class="pagination-controls">
+                        <button class="btn-page" id="btn-downtime-prev" onclick="changeDowntimePage(-1)" disabled>◀ Prev</button>
+                        <span class="page-indicator" id="downtime-page-info">1 / 1</span>
+                        <button class="btn-page" id="btn-downtime-next" onclick="changeDowntimePage(1)" disabled>Next ▶</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Connections & Open Ports Telemetry -->
+            <div class="table-card" style="margin-top: 16px;" id="sec-network-ports">
+                <div class="table-header">
+                    <span class="table-title">🔌 Active Connections & Open Ports Telemetry</span>
+                    <span class="pill-badge" id="conn-active-badge">-- Connections</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; padding: 14px;">
+                    <!-- Active Destination Traffic Ports -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-weight: 600; font-size: 13px; color: #38bdf8;">🌐 Top Active Destination Ports</span>
+                            <span style="font-size: 11px; color: var(--text-muted);" id="conn-proto-breakdown">TCP: -- | UDP: --</span>
+                        </div>
+                        <div class="table-wrap" style="border: none;">
+                            <table style="font-size: 12px;">
+                                <thead>
+                                    <tr><th>Port</th><th>Protocol / Service</th><th>Active Flows</th><th>Share</th></tr>
+                                </thead>
+                                <tbody id="tbl-top-ports-body">
+                                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 14px;">Awaiting connection telemetry...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Modem Local Listening Ports -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-weight: 600; font-size: 13px; color: #34d399;">🛡️ Modem Local Listening Ports & Security</span>
+                            <span class="pill-badge" style="background: rgba(52, 211, 153, 0.1); color: #34d399; border-color: rgba(52, 211, 153, 0.3);">WAN Protected (DROP)</span>
+                        </div>
+                        <div class="table-wrap" style="border: none;">
+                            <table style="font-size: 12px;">
+                                <thead>
+                                    <tr><th>Port</th><th>Protocol</th><th>Service Name</th><th>Access / Firewall</th></tr>
+                                </thead>
+                                <tbody id="tbl-open-ports-body">
+                                    <tr><td style="font-weight: 600; color: #38bdf8;">8080</td><td><span class="pill-badge" style="font-size: 10px;">TCP</span></td><td>SimpleAdmin Web UI</td><td><span style="color: #34d399;">LAN Only (WAN Dropped)</span></td></tr>
+                                    <tr><td style="font-weight: 600; color: #38bdf8;">22</td><td><span class="pill-badge" style="font-size: 10px;">TCP</span></td><td>OpenSSH Secure Shell</td><td><span style="color: #34d399;">LAN Only (WAN Dropped)</span></td></tr>
+                                    <tr><td style="font-weight: 600; color: #38bdf8;">53</td><td><span class="pill-badge" style="font-size: 10px;">UDP</span></td><td>Dnsmasq DNS Resolver</td><td><span style="color: #34d399;">LAN Only (WAN Dropped)</span></td></tr>
+                                    <tr><td style="font-weight: 600; color: #38bdf8;">123</td><td><span class="pill-badge" style="font-size: 10px;">UDP</span></td><td>NTP Network Time Server</td><td><span style="color: #34d399;">LAN Only (WAN Dropped)</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: AT CONSOLE & BAND LOCKER -->
+        <div id="tab-console" class="tab-content">
+            <div class="table-card" style="margin-bottom: 16px;">
+                <div class="table-header">
+                    <span class="table-title">⚡ Quick Band Locking & Actions</span>
+                </div>
+                <div class="presets-grid">
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+WS46=30')">
+                        🔒 5G NR Only (SA Lock)
+                        <span>AT+WS46=30</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+WS46=28')">
+                        🔒 4G LTE Only
+                        <span>AT+WS46=28</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+WS46=25')">
+                        🔄 Auto 5G Preferred
+                        <span>AT+WS46=25</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+WS46?')">
+                        ❓ Check Network Mode
+                        <span>AT+WS46?</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+CSQ')">
+                        📶 Signal Quality (CSQ)
+                        <span>AT+CSQ</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('ATI')">
+                        ℹ️ Device Model & IMEI
+                        <span>ATI</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendPresetCommand('AT+CPIN?')">
+                        💳 SIM & PIN Status
+                        <span>AT+CPIN?</span>
+                    </button>
+                    <button class="btn-preset" onclick="sendRebootCommand()">
+                        🔄 Soft Modem Reboot
+                        <span>Graceful hardware restart</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SIM PIN Authentication & Security Card -->
+            <div class="table-card" style="margin-bottom: 16px;">
+                <div class="table-header">
+                    <span class="table-title">🔐 SIM PIN Authentication & Security</span>
+                    <span class="pill-badge" id="sim-sec-pill">Checking SIM...</span>
+                </div>
+                
+                <div style="padding: 16px;">
+                    <!-- Status summary row -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">SIM STATUS</div>
+                            <div id="sim-sec-status" style="font-size: 16px; font-weight: 800; color: #34d399; margin-top: 4px;">--</div>
+                            <div id="sim-sec-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Normal Network State</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">PIN LOCK FACILITY</div>
+                            <div id="sim-sec-lock-state" style="font-size: 16px; font-weight: 800; color: var(--primary); margin-top: 4px;">--</div>
+                            <div id="sim-sec-lock-sub" style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Hardware Level Lock</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">REMAINING RETRIES</div>
+                            <div id="sim-sec-retries" style="font-size: 16px; font-weight: 800; color: #fb923c; margin-top: 4px;">--</div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">PIN / PUK Safeguard</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">BOOT AUTO-UNLOCK</div>
+                            <div id="sim-sec-auto-unlock" style="font-size: 16px; font-weight: 800; color: #c084fc; margin-top: 4px;">--</div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Protected Root Storage</div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <button class="btn-lock" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56,189,248,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('unlock')">
+                            🔓 Manual Unlock SIM
+                        </button>
+                        <button class="btn-lock" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16,185,129,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('toggle_lock')">
+                            🔒 Enable / Disable PIN Lock
+                        </button>
+                        <button class="btn-lock" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168,85,247,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('change_pin')">
+                            🔑 Change SIM PIN
+                        </button>
+                        <button class="btn-lock" style="background: rgba(251, 146, 60, 0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('auto_unlock')">
+                            ⚙️ Configure Boot Auto-Unlock
+                        </button>
+                        <button class="btn-lock" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239,68,68,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('puk')">
+                            🆘 PUK Recovery
+                        </button>
+                    </div>
+
+                    <div id="sim-action-alert" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-header">
+                    <span class="table-title">💻 Reverse AT Terminal</span>
+                    <span class="pill-active">Outbound HTTPS Sync</span>
+                </div>
+                <div class="terminal-box" id="terminal-screen">> Ready. Enter AT commands below or choose a preset above...</div>
+                <div class="cmd-bar">
+                    <input type="text" id="at-input" class="cmd-input" placeholder="Type AT command (e.g. ATI, AT+CSQ, AT+QENG=&quot;servingcell&quot;)" autocomplete="off" />
+                    <button class="cmd-btn" onclick="sendManualCommand()">Execute AT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CLOUD SMS & USSD -->
+        <div id="tab-sms" class="tab-content">
+            <div class="tables-grid">
+                <!-- SMS Inbox -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">💬 Inbound SMS Inbox & OTPs</span>
+                        <span class="pill-badge" id="sms-count-badge">0 Messages</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Sender</th><th>Message</th><th>Received</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="tbl-sms-body">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No messages in cloud inbox.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- USSD & Send SMS -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">📲 USSD Dialer & Outbound SMS</span>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="font-size: 12px; margin-bottom: 8px; color: #fff;">Dial USSD Code (Balance / Info)</h4>
+                        <div class="form-row">
+                            <input type="text" id="ussd-input" class="form-input" placeholder="*333#" value="*333#" />
+                            <button class="form-btn" onclick="sendUSSD()">Dial USSD</button>
+                        </div>
+                        <div id="ussd-result-box" style="font-family: var(--font-mono); font-size: 11px; color: #34d399; margin-top: 4px;"></div>
+                    </div>
+
+                    <div>
+                        <h4 style="font-size: 12px; margin-bottom: 8px; color: #fff;">Send Outbound SMS</h4>
+                        <div class="form-row">
+                            <input type="text" id="sms-num-input" class="form-input" placeholder="Recipient Number (+91...)" />
+                        </div>
+                        <div class="form-row">
+                            <input type="text" id="sms-msg-input" class="form-input" placeholder="Message text" />
+                            <button class="form-btn" onclick="sendSMS()">Send SMS</button>
+                        </div>
+                        <div id="sms-status-box" style="font-size: 11px; color: var(--text-muted);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: ALERTS & EVENTS -->
+        <div id="tab-alerts" class="tab-content">
+            <div class="tables-grid">
+                <!-- Alert Timeline -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">🚨 Real-time Event Feed</span>
+                        <span class="pill-badge" id="alerts-count-badge">0 Events</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Level</th><th>Title</th><th>Details</th><th>Time</th></tr>
+                            </thead>
+                            <tbody id="tbl-alerts-body">
+                                <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No alert events recorded.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <span style="color: var(--text-muted);">5 items / page</span>
+                        <div class="pagination-controls">
+                            <button class="btn-page" id="btn-alerts-prev" onclick="changeAlertsPage(-1)" disabled>◀ Prev</button>
+                            <span class="page-indicator" id="alerts-page-info">1 / 1</span>
+                            <button class="btn-page" id="btn-alerts-next" onclick="changeAlertsPage(1)" disabled>Next ▶</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telegram Config -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">🤖 Telegram Instant Alerts</span>
+                    </div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+                        Receive instant alerts on your phone whenever the modem switches towers, drops from n78 to n28, rotates public IP, or receives 2FA/OTPs.
+                    </p>
+                    <div class="form-row">
+                        <input type="password" id="tg-token-input" class="form-input" placeholder="Telegram Bot Token (e.g. 123456:ABC...)" />
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="tg-chat-input" class="form-input" placeholder="Telegram Chat ID (e.g. 98765432)" />
+                        <button class="form-btn" onclick="saveTelegramConfig()">Save & Test Alert</button>
+                    </div>
+                    <div id="tg-status-box" style="font-size: 11px; color: #34d399; margin-top: 6px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: CLOUD BACKUPS -->
+        <div id="tab-backups" class="tab-content">
+            <div class="table-card">
+                <div class="table-header">
+                    <span class="table-title">💾 Modem Configuration & Script Backups</span>
+                    <button class="form-btn" onclick="triggerBackup()">➕ Create Backup Snapshot</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Backup File</th><th>Size</th><th>Created At</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="tbl-backups-body">
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No backups stored on cloud VPS yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: DNS & AD-BLOCK ANALYTICS -->
+        <div id="tab-dns" class="tab-content">
+            <!-- DNS Header & Engine Status Card -->
+            <div class="glass-card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <div style="font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>🛡️</span> Dual-Stack DNS Engine &amp; Ad-Block Analytics
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            High-Performance In-Memory Resolver • Fast RAM Cache • Ad &amp; Tracker Sinkhole
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="card-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--primary); border: 1px solid rgba(56, 189, 248, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 8px;" id="dns-badge-profile">--</span>
+                        <span class="card-badge green" id="dns-badge-engine">⚡ In-Memory Cache</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DNS KPI 4 Cards Grid -->
+            <div class="cards-grid" style="margin-bottom: 20px;">
+                <!-- Total Queries -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌐 Total DNS Queries</span>
+                        <span class="card-badge" id="dns-kpi-qpm">--</span>
+                    </div>
+                    <div class="card-val" id="dns-kpi-total" style="color: var(--primary);">--</div>
+                    <div class="card-sub">
+                        <span>Allowed: <b id="dns-kpi-allowed" style="color: #34d399;">--</b></span>
+                        <span>Capacity: <b id="dns-kpi-capacity" style="color: #94a3b8;">--</b></span>
+                    </div>
+                </div>
+
+                <!-- Blocked Queries -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🛑 Ads &amp; Trackers Sinkholed</span>
+                        <span class="card-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);" id="dns-kpi-block-rate">--</span>
+                    </div>
+                    <div class="card-val" id="dns-kpi-blocked" style="color: #f87171;">--</div>
+                    <div class="card-sub">
+                        <span>Blocklist: <b id="dns-kpi-blocklist-count" style="color: #f87171;">--</b></span>
+                        <span>Sinkhole IP: <b id="dns-kpi-sinkhole-ip" style="color: #94a3b8;">0.0.0.0 / ::</b></span>
+                    </div>
+                </div>
+
+                <!-- RAM Cache Hit Rate -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⚡ In-Memory Cache Hits</span>
+                        <span class="card-badge green" id="dns-kpi-cache-rate">--</span>
+                    </div>
+                    <div class="card-val" id="dns-kpi-cached" style="color: #34d399;">--</div>
+                    <div class="card-sub">
+                        <span>RAM Latency: <b id="dns-kpi-ram-latency" style="color: #34d399;">--</b></span>
+                        <span>Min TTL: <b id="dns-kpi-min-ttl" style="color: #94a3b8;">--</b></span>
+                    </div>
+                </div>
+
+                <!-- Upstream Resolvers -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">📡 Upstream Latency</span>
+                        <span class="card-badge purple" id="dns-kpi-upstream-name">--</span>
+                    </div>
+                    <div class="card-val" id="dns-kpi-upstream-ip" style="font-size: 15px; font-weight: 700; color: #a78bfa; padding-top: 4px;">--</div>
+                    <div class="card-sub" style="margin-top: 6px;">
+                        <span>IPv6: <b id="dns-kpi-upstream-ipv6" style="color: #a78bfa; font-size: 10px;">--</b></span>
+                        <span>Ping: <b id="dns-kpi-upstream-ping" style="color: #34d399;">--</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2-Column Analytics: Top Resolved vs Top Blocked Domains -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <!-- Top 10 Allowed / Resolved Domains -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">📈 Top 10 Resolved Domains</span>
+                        <span class="card-badge green">Traffic Frequency</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>#</th><th>Domain Name</th><th>Queries</th><th>Traffic %</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="tbl-dns-top-resolved">
+                                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading resolved domain metrics...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 10 Blocked Ad / Tracker Domains -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">🛑 Top 10 Blocked Ads &amp; Trackers</span>
+                        <span class="card-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Sinkholed</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>#</th><th>Blocked Domain</th><th>Hits</th><th>Category</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="tbl-dns-top-blocked">
+                                <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading adblock metrics...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Real-Time DNS Query Log Stream -->
+            <div class="table-card" style="margin-bottom: 20px;">
+                <div class="table-header" style="flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <span class="table-title">⚡ Live DNS Query Stream &amp; Log Feed</span>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Real-time query inspections across all connected LAN clients</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="dns-search-filter" class="form-input" style="padding: 6px 12px; font-size: 12px; width: 180px;" placeholder="Search domain / IP..." oninput="filterDnsQueryFeed()">
+                        <select id="dns-type-filter" class="form-select" style="padding: 6px 10px; font-size: 12px; width: 140px;" onchange="filterDnsQueryFeed()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="BLOCKED">🛑 Blocked Only</option>
+                            <option value="CACHED">⚡ Cached Only</option>
+                            <option value="RESOLVED">🌐 Resolved Only</option>
+                        </select>
+                        <button class="form-btn" style="padding: 6px 12px; font-size: 12px;" onclick="fetchDns()">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="table-wrap" style="max-height: 420px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Client IP</th>
+                                <th>Type</th>
+                                <th>Queried Domain</th>
+                                <th>Latency</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbl-dns-live-feed">
+                            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Streaming live DNS telemetry...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-bar">
+                    <span style="color: var(--text-muted);">25 items / page</span>
+                    <div class="pagination-controls">
+                        <button class="btn-page" id="btn-dns-prev" onclick="changeDnsQueriesPage(-1)" disabled>◀ Prev</button>
+                        <span class="page-indicator" id="dns-page-info">1 / 1</span>
+                        <button class="btn-page" id="btn-dns-next" onclick="changeDnsQueriesPage(1)" disabled>Next ▶</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live DNS Benchmark & Filter Tester Tool -->
+            <div class="glass-card">
+                <div class="card-header" style="margin-bottom: 12px;">
+                    <div style="font-size: 15px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                        <span>🔬</span> Live DNS Benchmark &amp; Sinkhole Tester
+                    </div>
+                    <span class="card-badge purple">Interactive Tool</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                    Benchmark query response time and verify if a specific domain is filtered by the ad/tracker sinkhole.
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <input type="text" id="dns-test-input-vps" class="form-input" style="flex: 1; min-width: 260px;" placeholder="Domain (e.g. google.com, doubleclick.net, apple.com)" value="google.com" onkeydown="if(event.key==='Enter') runDnsBenchmarkVPS()">
+                    <button class="form-btn primary" onclick="runDnsBenchmarkVPS()" style="min-width: 120px;">⚡ Benchmark</button>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
+                    <button class="card-badge" style="cursor: pointer; background: rgba(255,255,255,0.06); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1);" onclick="setDnsTestChipVPS('google.com')">google.com</button>
+                    <button class="card-badge" style="cursor: pointer; background: rgba(255,255,255,0.06); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1);" onclick="setDnsTestChipVPS('cloudflare.com')">cloudflare.com</button>
+                    <button class="card-badge" style="cursor: pointer; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);" onclick="setDnsTestChipVPS('doubleclick.net')">doubleclick.net (Ad Test)</button>
+                    <button class="card-badge" style="cursor: pointer; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);" onclick="setDnsTestChipVPS('analytics.tiktok.com')">analytics.tiktok.com (Tracker Test)</button>
+                </div>
+                <div id="dns-benchmark-res" style="background: rgba(0,0,0,0.35); border: 1px solid var(--border-card); border-radius: 10px; padding: 14px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); min-height: 48px;">
+                    Ready. Click "Benchmark" to resolve DNS records and measure upstream latency.
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <span id="ftr-model">5G Modem</span> • Cloud Telemetry Hub • Authenticated via HSTS TLS 1.3
+        </footer>
+    </div>
+
+    <script>
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function setTextIfChanged(id, val) {
+            const el = document.getElementById(id);
+            if (el) {
+                const s = String(val);
+                if (el.textContent !== s) el.textContent = s;
+            }
+        }
+
+        function setHtmlIfChanged(id, newHtml) {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.innerHTML !== newHtml) el.innerHTML = newHtml;
+            }
+        }
+
+        let currentRange = '1h';
+        let charts = {};
+        let eventSource = null;
+        let authKey = localStorage.getItem('hub_auth_key') || '';
+
+        // Pagination State
+        const PAGE_SIZE = 5;
+        let ipList = [];
+        let ipCurrentPage = 1;
+        let ipTotalPages = 1;
+        let ipTotal = 0;
+
+        let towersList = [];
+        let towersCurrentPage = 1;
+        let towersTotalPages = 1;
+        let towersTotal = 0;
+
+        let usageList = [];
+        let usageSummary = null;
+        let usageCurrentPage = 1;
+        let usageTotalPages = 1;
+        let usageTotal = 0;
+
+        let downtimeList = [];
+        let downtimeCurrentPage = 1;
+        let downtimeTotalPages = 1;
+        let downtimeTotal = 0;
+
+        let alertsList = [];
+        let alertsCurrentPage = 1;
+        let alertsTotalPages = 1;
+        let alertsTotal = 0;
+
+        let dnsQueriesList = [];
+        let dnsQueriesPage = 1;
+        let dnsQueriesTotalPages = 1;
+        let dnsQueriesTotal = 0;
+
+        // Check URL parameter for ?key=...
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('key') && urlParams.get('key')) {
+            authKey = urlParams.get('key');
+            localStorage.setItem('hub_auth_key', authKey);
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: authKey })
+            }).catch(() => {});
+        }
+
+        function getAuthHeaders() {
+            const h = {};
+            if (authKey) {
+                h['X-Auth-Key'] = authKey;
+                h['Authorization'] = 'Bearer ' + authKey;
+            }
+            return h;
+        }
+
+        function showAuthOverlay() {
+            document.getElementById('auth-overlay').style.display = 'flex';
+            const inp = document.getElementById('auth-password-input');
+            if (inp) { inp.value = ''; inp.focus(); }
+        }
+
+        function hideAuthOverlay() {
+            document.getElementById('auth-overlay').style.display = 'none';
+        }
+
+        async function submitAuth() {
+            const input = document.getElementById('auth-password-input');
+            const err = document.getElementById('auth-error-msg');
+            const pwd = input.value.trim();
+            if (!pwd) return;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    authKey = data.token || pwd;
+                    localStorage.setItem('hub_auth_key', authKey);
+                    err.style.display = 'none';
+                    hideAuthOverlay();
+                    initApp();
+                } else {
+                    err.style.display = 'block';
+                }
+            } catch (e) {
+                err.textContent = 'Connection error: ' + e.message;
+                err.style.display = 'block';
+            }
+        }
+
+        function lockSession() {
+            localStorage.removeItem('hub_auth_key');
+            authKey = '';
+            if (eventSource) eventSource.close();
+            showAuthOverlay();
+        }
+
+        document.getElementById('auth-password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitAuth();
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            const btn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+            if (btn) btn.classList.add('active');
+            const content = document.getElementById('tab-' + tabId);
+            if (content) content.classList.add('active');
+
+            if (tabId === 'dns') {
+                fetchDns();
+                fetchDnsQueries(dnsQueriesPage);
+            }
+            if (tabId === 'sms') fetchSMS();
+            if (tabId === 'alerts') fetchAlerts();
+            if (tabId === 'backups') fetchBackups();
+        }
+
+        // Initialize Charts
+        function initCharts() {
+            if (typeof Chart === 'undefined') return;
+
+            try {
+                Chart.defaults.color = '#94a3b8';
+                Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+                Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
+                const commonOptions = {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
+                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxRotation: 0, font: { size: 9 } } },
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { font: { size: 9 } } }
+                    }
+                };
+
+                const cSignal = document.getElementById('chart-signal');
+                if (cSignal && !charts.signal) {
+                    charts.signal = new Chart(cSignal, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                { label: 'RSRP (dBm)', borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', fill: true, tension: 0.3, yAxisID: 'y' },
+                                { label: 'SINR (dB)', borderColor: '#10b981', backgroundColor: 'transparent', borderDash: [4, 4], tension: 0.3, yAxisID: 'y1' }
+                            ]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                ...commonOptions.scales,
+                                y: { position: 'left', title: { display: true, text: 'RSRP dBm', color: '#38bdf8', font: { size: 9 } } },
+                                y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'SINR dB', color: '#10b981', font: { size: 9 } } }
+                            }
+                        }
+                    });
+                }
+
+                const cBw = document.getElementById('chart-bandwidth');
+                if (cBw && !charts.bandwidth) {
+                    charts.bandwidth = new Chart(cBw, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                { label: 'Download (Mbps)', borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.15)', fill: true, tension: 0.3 },
+                                { label: 'Upload (Mbps)', borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', fill: true, tension: 0.3 }
+                            ]
+                        },
+                        options: commonOptions
+                    });
+                }
+
+                const cLat = document.getElementById('chart-latency');
+                if (cLat && !charts.latency) {
+                    charts.latency = new Chart(cLat, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                { label: 'Modem ↔ VPS (ms)', borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.15)', fill: true, tension: 0.3 },
+                                { label: 'Cloudflare (ms)', borderColor: '#34d399', backgroundColor: 'transparent', tension: 0.3 },
+                                { label: 'Google (ms)', borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.3 }
+                            ]
+                        },
+                        options: commonOptions
+                    });
+                }
+
+                const cRes = document.getElementById('chart-resources');
+                if (cRes && !charts.resources) {
+                    charts.resources = new Chart(cRes, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                { label: 'CPU %', borderColor: '#ef4444', backgroundColor: 'transparent', tension: 0.3 },
+                                { label: 'RAM %', borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.3 }
+                            ]
+                        },
+                        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { min: 0, max: 100 } } }
+                    });
+                }
+            } catch (err) {
+                console.error('initCharts error:', err);
+            }
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts * 1000);
+            return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function formatDateTime(ts) {
+            if (!ts) return '--';
+            const d = new Date(ts * 1000);
+            return d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' });
+        }
+
+        let lastModemPushTs = 0;
+        let lastClientReceiveTs = 0;
+
+        function formatUptimeSec(seconds) {
+            if (!seconds && seconds !== 0) return '--';
+            const s = Math.max(0, parseInt(seconds, 10) || 0);
+            const days = Math.floor(s / 86400);
+            const hours = Math.floor((s % 86400) / 3600);
+            const minutes = Math.floor((s % 3600) / 60);
+            const secs = s % 60;
+            
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
+            if (minutes > 0) return `${minutes}m ${secs}s`;
+            return `${secs}s`;
+        }
+
+        function updateSyncTickers() {
+            if (!lastModemPushTs && !lastClientReceiveTs) return;
+            const now = Math.floor(Date.now() / 1000);
+            
+            if (lastModemPushTs > 0) {
+                const ageSec = Math.max(0, now - lastModemPushTs);
+                const ageText = ageSec === 0 ? 'just now' : `${ageSec}s ago`;
+                const timeStr = formatTime(lastModemPushTs);
+                setTextIfChanged('hdr-modem-sync', `${timeStr} (${ageText})`);
+                setTextIfChanged('kpi-modem-push', `${timeStr} (${ageText})`);
+                setTextIfChanged('hdr-sync-age', ageText);
+            }
+
+            if (lastClientReceiveTs > 0) {
+                const clientAgeSec = Math.max(0, Math.floor((Date.now() - lastClientReceiveTs) / 1000));
+                const clientAgeText = clientAgeSec <= 1 ? 'just now' : `${clientAgeSec}s ago`;
+                const clientTimeStr = formatTime(Math.floor(lastClientReceiveTs / 1000));
+                setTextIfChanged('hdr-client-sync', `${clientTimeStr} (${clientAgeText})`);
+                setTextIfChanged('kpi-client-push', `${clientTimeStr} (${clientAgeText})`);
+            }
+        }
+
+        function updateLiveUI(payload) {
+            try {
+                const d = payload.data || payload;
+                if (!d) return;
+
+                const conn = d.connection || {};
+                const adv = d.advanced || {};
+                const spd = d.speed || {};
+                const usg = d.usage || {};
+                const res = d.resources || {};
+                const thm = d.thermals || {};
+                const png = d.ping || {};
+                const hst = d.host_link || {};
+                const sys = d.system || payload.system || {};
+                const twr = d.tower_cell || {};
+
+                const uptimeStr = (sys.uptime_sec !== undefined && sys.uptime_sec !== null && sys.uptime_sec !== '')
+                    ? formatUptimeSec(sys.uptime_sec)
+                    : (sys.uptime ? String(sys.uptime) : '--');
+                setTextIfChanged('hdr-uptime', 'Uptime: ' + uptimeStr);
+                setTextIfChanged('kpi-uptime', uptimeStr);
+
+                if (sys.model) {
+                    setTextIfChanged('hdr-model', sys.model);
+                    setTextIfChanged('ftr-model', sys.model);
+                }
+
+                const modemTs = payload.timestamp || d.server_ts || d.timestamp || payload.server_ts;
+                if (modemTs) {
+                    lastModemPushTs = Number(modemTs);
+                }
+                lastClientReceiveTs = Date.now();
+                updateSyncTickers();
+
+                const prov = conn.provider || (d.status === 'offline' ? 'Cellular Modem' : 'Detecting Carrier...');
+                const netType = conn.network_type || '';
+                const bandStr = conn.nr5g_band || conn.connection_bands || '';
+                if (document.getElementById('hdr-title')) document.getElementById('hdr-title').textContent = `${prov} ${netType ? '• ' + netType : ''}`;
+                document.title = `${prov} ${netType ? netType + ' ' : ''}• Cloud Hub`;
+                setTextIfChanged('hdr-carrier', prov + (bandStr ? ' (' + bandStr + ')' : ''));
+                setTextIfChanged('kpi-carrier-name', prov);
+                setTextIfChanged('kpi-interface', hst.interface || conn.interface || '--');
+
+                const rsrp = twr.rsrp || adv.rsrp || adv.nr_rsrp || '--';
+                const sinr = twr.sinr || adv.sinr || '--';
+                const rsrq = adv.rsrq || '--';
+                const csq = adv.csq || '--';
+                setTextIfChanged('kpi-rsrp', rsrp);
+                setTextIfChanged('kpi-signal-badge', (conn.signal_quality || '--'));
+                setTextIfChanged('kpi-sinr', sinr);
+                setTextIfChanged('kpi-rsrq', rsrq);
+                setTextIfChanged('kpi-csq', csq);
+
+                const activeIp = payload.public_ip || d.public_ip || conn.mobile_ipv6 || conn.mobile_ipv4 || '--';
+                setTextIfChanged('kpi-public-ip', activeIp);
+                setTextIfChanged('kpi-ip-type', activeIp.includes(':') ? 'IPv6 Egress' : (activeIp !== '--' ? 'IPv4 Egress' : '--'));
+
+                setTextIfChanged('kpi-speed-dl', spd.download_speed || '0 B/s');
+                setTextIfChanged('kpi-speed-ul', spd.upload_speed || '0 B/s');
+                setTextIfChanged('kpi-band', conn.nr5g_band || conn.connection_bands || '--');
+                setTextIfChanged('kpi-net-type', conn.network_type || '--');
+                setTextIfChanged('kpi-usage-badge', usg.plan_type ? `${usg.plan_type} 5G` : 'Data Plan');
+
+                setTextIfChanged('kpi-usage-today', usg.today_total || '0 B');
+                setTextIfChanged('kpi-usage-today-dl', usg.today_download || '0 B');
+                setTextIfChanged('kpi-usage-today-ul', usg.today_upload || '0 B');
+                setTextIfChanged('kpi-usage-month', usg.month_total || '0 B');
+                setTextIfChanged('kpi-usage-alltime', usg.alltime_total || '0 B');
+
+                setTextIfChanged('kpi-temp-modem', thm.mdm_5g || thm.cpu || '--');
+                setTextIfChanged('kpi-temp-cpu', thm.cpu || '--');
+                setTextIfChanged('kpi-ram', (res.ram_percent ? res.ram_percent + '%' : '--'));
+                setTextIfChanged('kpi-system-health', d.status === 'offline' ? 'Offline' : 'Optimal');
+
+                if (document.getElementById('kpi-ping-vps')) {
+                    const rawP = png.vps_ms ? Number(png.vps_ms) : (parseFloat(png.vps) || 0);
+                    setTextIfChanged('kpi-ping-vps', (rawP > 0 && rawP < 2000) ? (png.vps || rawP + ' ms') : (png.vps || '--'));
+                }
+                setTextIfChanged('kpi-ping-cf', png.cloudflare || '--');
+                if (document.getElementById('dns-kpi-upstream-ping') && png.cloudflare) {
+                    const cfPing = png.cloudflare.toString();
+                    setTextIfChanged('dns-kpi-upstream-ping', cfPing.includes('ms') ? cfPing : (cfPing + ' ms'));
+                }
+                setTextIfChanged('kpi-ping-gg', png.google || '--');
+                if (document.getElementById('kpi-link-badge')) {
+                    setTextIfChanged('kpi-link-badge', hst.usb_speed ? hst.usb_speed.split(' ')[0] : (d.status === 'offline' ? 'Offline' : 'Modem ↔ VPS'));
+                }
+                if (document.getElementById('kpi-host-ip')) {
+                    setTextIfChanged('kpi-host-ip', hst.host_ip || '--');
+                }
+
+                const badge = document.getElementById('badge-stream-status');
+                const txt = document.getElementById('txt-stream-status');
+                if (badge) badge.className = 'live-status';
+                if (txt) txt.textContent = 'Live Stream Active';
+
+                // Network Connections & Ports Telemetry
+                const netConn = d.network_connections || payload.network_connections || {};
+                if (document.getElementById('kpi-conn-total')) {
+                    const totalConn = (netConn.total !== undefined) ? netConn.total : '--';
+                    setTextIfChanged('kpi-conn-total', totalConn.toString());
+                    setTextIfChanged('kpi-conn-tcp', (netConn.tcp !== undefined) ? netConn.tcp.toString() : '--');
+                    setTextIfChanged('kpi-conn-udp', (netConn.udp !== undefined) ? netConn.udp.toString() : '--');
+                    
+                    const badgeEl = document.getElementById('kpi-conn-badge');
+                    if (badgeEl && typeof netConn.total === 'number') {
+                        if (netConn.total > 400) {
+                            badgeEl.className = 'card-badge red';
+                            badgeEl.textContent = 'High Load';
+                        } else if (netConn.total > 200) {
+                            badgeEl.className = 'card-badge yellow';
+                            badgeEl.textContent = 'Moderate';
+                        } else {
+                            badgeEl.className = 'card-badge green';
+                            badgeEl.textContent = 'Optimal';
+                        }
+                    }
+
+                    if (netConn.top_ports && netConn.top_ports.length > 0) {
+                        const topP = netConn.top_ports[0];
+                        setTextIfChanged('kpi-conn-top-port', `${topP.service || topP.port} (${topP.count})`);
+                    }
+
+                    renderPortsTable(netConn);
+                }
+
+                // SIM Security Telemetry
+                const simSec = d.sim_security || payload.sim_security || {};
+                if (document.getElementById('sim-sec-status')) {
+                    const status = simSec.sim_status || 'UNKNOWN';
+                    const pill = document.getElementById('sim-sec-pill');
+                    const stEl = document.getElementById('sim-sec-status');
+                    const lkEl = document.getElementById('sim-sec-lock-state');
+                    const autoEl = document.getElementById('sim-sec-auto-unlock');
+
+                    setTextIfChanged('sim-sec-status', status);
+                    if (status === 'READY') {
+                        if (stEl) stEl.style.color = '#34d399';
+                        if (pill) { pill.className = 'pill-active'; pill.textContent = 'SIM Ready / Unlocked'; pill.style.borderColor = ''; pill.style.color = ''; }
+                    } else if (status === 'SIM PIN') {
+                        if (stEl) stEl.style.color = '#fb923c';
+                        if (pill) { pill.className = 'pill-badge'; pill.style.borderColor = '#fb923c'; pill.style.color = '#fb923c'; pill.textContent = 'Action Required: PIN Locked'; }
+                    } else if (status === 'SIM PUK') {
+                        if (stEl) stEl.style.color = '#f87171';
+                        if (pill) { pill.className = 'pill-badge'; pill.style.borderColor = '#f87171'; pill.style.color = '#f87171'; pill.textContent = 'CRITICAL: PUK Locked'; }
+                    } else {
+                        if (stEl) stEl.style.color = 'var(--text-muted)';
+                        if (pill) { pill.className = 'pill-badge'; pill.textContent = status; pill.style.borderColor = ''; pill.style.color = ''; }
+                    }
+
+                    if (simSec.pin_lock_enabled === 1) {
+                        setTextIfChanged('sim-sec-lock-state', 'Enabled');
+                        if (lkEl) lkEl.style.color = '#38bdf8';
+                    } else if (simSec.pin_lock_enabled === 0) {
+                        setTextIfChanged('sim-sec-lock-state', 'Disabled');
+                        if (lkEl) lkEl.style.color = 'var(--text-muted)';
+                    } else {
+                        setTextIfChanged('sim-sec-lock-state', '--');
+                    }
+
+                    const pinRet = simSec.pin_retries !== undefined ? simSec.pin_retries : '--';
+                    const pukRet = simSec.puk_retries !== undefined ? simSec.puk_retries : '--';
+                    setTextIfChanged('sim-sec-retries', `${pinRet} PIN / ${pukRet} PUK`);
+
+                    if (simSec.auto_unlock_failed === 1) {
+                        setTextIfChanged('sim-sec-auto-unlock', 'Failed (Check PIN)');
+                        if (autoEl) autoEl.style.color = '#f87171';
+                    } else if (simSec.auto_unlock_configured === 1) {
+                        setTextIfChanged('sim-sec-auto-unlock', 'Active (Configured)');
+                        if (autoEl) autoEl.style.color = '#c084fc';
+                    } else {
+                        setTextIfChanged('sim-sec-auto-unlock', 'Not Configured');
+                        if (autoEl) autoEl.style.color = 'var(--text-muted)';
+                    }
+
+                    // SIM PIN / PUK / Auto-unlock Warning Banner on Tab 1
+                    const banner = document.getElementById('vps-sim-alert-banner');
+                    const bannerText = document.getElementById('vps-sim-alert-text');
+                    const bannerActions = document.getElementById('vps-sim-alert-actions');
+
+                    if (banner && bannerText && bannerActions) {
+                        if (status === 'SIM PIN') {
+                            banner.style.display = 'flex';
+                            banner.style.background = 'rgba(251, 146, 60, 0.15)';
+                            banner.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+                            bannerText.innerHTML = `⚠️ <span><b>SIM PIN Locked!</b> Cellular baseband requires PIN unlock to attach to 5G network. (${pinRet} retries left)</span>`;
+                            bannerActions.innerHTML = `<button class="btn-lock" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); padding: 6px 14px; font-weight: 700; border-radius: 6px; cursor: pointer;" onclick="handleSimPinAction('unlock')">🔓 Unlock SIM</button>`;
+                        } else if (status === 'SIM PUK') {
+                            banner.style.display = 'flex';
+                            banner.style.background = 'rgba(239, 68, 68, 0.18)';
+                            banner.style.borderColor = 'rgba(239, 68, 68, 0.45)';
+                            bannerText.innerHTML = `🚨 <span><b>CRITICAL: SIM PUK Locked!</b> The SIM is blocked. Enter 8-digit PUK to restore access. (${pukRet} retries left)</span>`;
+                            bannerActions.innerHTML = `<button class="btn-lock" style="background: rgba(239, 68, 68, 0.25); color: #f87171; border-color: rgba(239, 68, 68, 0.5); padding: 6px 14px; font-weight: 700; border-radius: 6px; cursor: pointer;" onclick="handleSimPinAction('puk')">🆘 PUK Recovery</button>`;
+                        } else if (simSec.auto_unlock_failed === 1) {
+                            banner.style.display = 'flex';
+                            banner.style.background = 'rgba(251, 146, 60, 0.15)';
+                            banner.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+                            bannerText.innerHTML = `⚠️ <span><b>Boot Auto-Unlock Failed!</b> Stored PIN was rejected. Automatic retries halted to prevent SIM lockout.</span>`;
+                            bannerActions.innerHTML = `<button class="btn-lock" style="background: rgba(251, 146, 60, 0.2); color: #fb923c; border-color: rgba(251, 146, 60, 0.4); padding: 6px 14px; font-weight: 700; border-radius: 6px; cursor: pointer;" onclick="handleSimPinAction('auto_unlock')">⚙️ Update PIN</button>`;
+                        } else {
+                            banner.style.display = 'none';
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('updateLiveUI error:', err);
+            }
+        }
+
+        async function fetchLive() {
+            try {
+                const res = await fetch('/api/telemetry/live', { headers: getAuthHeaders() });
+                if (res.status === 401) { showAuthOverlay(); return; }
+                if (res.ok) {
+                    const data = await res.json();
+                    updateLiveUI(data);
+                }
+            } catch (e) {}
+        }
+
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/telemetry/history?range=' + currentRange, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    const points = json.points || [];
+                    const labels = points.map(p => formatTime(p.ts));
+
+                    if (charts.signal) {
+                        charts.signal.data.labels = labels;
+                        charts.signal.data.datasets[0].data = points.map(p => p.rsrp);
+                        charts.signal.data.datasets[1].data = points.map(p => p.sinr);
+                        charts.signal.update('none');
+                    }
+                    if (charts.bandwidth) {
+                        charts.bandwidth.data.labels = labels;
+                        charts.bandwidth.data.datasets[0].data = points.map(p => p.dl_mbps);
+                        charts.bandwidth.data.datasets[1].data = points.map(p => p.ul_mbps);
+                        charts.bandwidth.update('none');
+                    }
+                    if (charts.latency) {
+                        charts.latency.data.labels = labels;
+                        charts.latency.data.datasets[0].data = points.map(p => p.ping_vps || p.ping);
+                        charts.latency.data.datasets[1].data = points.map(p => p.ping);
+                        charts.latency.data.datasets[2].data = points.map(p => p.ping_gg);
+                        charts.latency.update('none');
+                    }
+                    if (charts.resources) {
+                        charts.resources.data.labels = labels;
+                        charts.resources.data.datasets[0].data = points.map(p => p.cpu);
+                        charts.resources.data.datasets[1].data = points.map(p => p.ram);
+                        charts.resources.update('none');
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function renderIPTable() {
+            const cntBadge = document.getElementById('ip-count-badge');
+            const pageInfo = document.getElementById('ip-page-info');
+            const btnPrev = document.getElementById('btn-ip-prev');
+            const btnNext = document.getElementById('btn-ip-next');
+
+            if (cntBadge) cntBadge.textContent = ipTotal.toLocaleString() + ' Total';
+
+            if (ipList.length === 0) {
+                setHtmlIfChanged('tbl-ips-body', '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">No IP history recorded yet.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = ipList.map((ip, idx) => {
+                const isFirst = (ipCurrentPage === 1 && idx === 0);
+                return `
+                    <tr>
+                        <td style="color: #38bdf8; font-weight: 600;">${escapeHtml(ip.ip)}</td>
+                        <td><span class="${isFirst ? 'pill-active' : 'pill-history'}">${escapeHtml(ip.ip_type || 'WAN')}</span></td>
+                        <td>${formatDateTime(ip.last_seen)}</td>
+                        <td>${ip.count || 1}</td>
+                    </tr>
+                `;
+            }).join('');
+            setHtmlIfChanged('tbl-ips-body', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${ipCurrentPage} / ${ipTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (ipCurrentPage <= 1);
+            if (btnNext) btnNext.disabled = (ipCurrentPage >= ipTotalPages);
+        }
+
+        function changeIPPage(delta) {
+            const target = ipCurrentPage + delta;
+            if (target >= 1 && target <= ipTotalPages) {
+                fetchIPs(target);
+            }
+        }
+
+        async function fetchIPs(page = 1) {
+            try {
+                const res = await fetch(`/api/telemetry/ips?page=${page}&limit=${PAGE_SIZE}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    ipList = json.ips || [];
+                    ipCurrentPage = json.page || page;
+                    ipTotal = json.total || ipList.length;
+                    ipTotalPages = json.total_pages || Math.ceil(ipTotal / PAGE_SIZE) || 1;
+                    renderIPTable();
+                }
+            } catch (e) {}
+        }
+
+        function renderTowersTable() {
+            const cntBadge = document.getElementById('tower-count-badge');
+            const pageInfo = document.getElementById('towers-page-info');
+            const btnPrev = document.getElementById('btn-towers-prev');
+            const btnNext = document.getElementById('btn-towers-next');
+
+            if (cntBadge) cntBadge.textContent = towersTotal.toLocaleString() + ' Total';
+
+            if (towersList.length === 0) {
+                setHtmlIfChanged('tbl-towers-body', '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px;">No tower history recorded yet.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = towersList.map((t) => `
+                <tr>
+                    <td style="color: #38bdf8; font-weight: 600;">${escapeHtml(t.enb)}</td>
+                    <td>${escapeHtml(t.cid)}</td>
+                    <td>${escapeHtml(t.band || 'n78')}</td>
+                    <td style="color: #34d399;">+${t.best_sinr} dB</td>
+                    <td>${t.count || 1}</td>
+                    <td>${formatDateTime(t.last_seen)}</td>
+                </tr>
+            `).join('');
+            setHtmlIfChanged('tbl-towers-body', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${towersCurrentPage} / ${towersTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (towersCurrentPage <= 1);
+            if (btnNext) btnNext.disabled = (towersCurrentPage >= towersTotalPages);
+        }
+
+        function changeTowersPage(delta) {
+            const target = towersCurrentPage + delta;
+            if (target >= 1 && target <= towersTotalPages) {
+                fetchTowers(target);
+            }
+        }
+
+        async function fetchTowers(page = 1) {
+            try {
+                const res = await fetch(`/api/telemetry/towers?page=${page}&limit=${PAGE_SIZE}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    towersList = json.towers || [];
+                    towersCurrentPage = json.page || page;
+                    towersTotal = json.total || towersList.length;
+                    towersTotalPages = json.total_pages || Math.ceil(towersTotal / PAGE_SIZE) || 1;
+                    renderTowersTable();
+                }
+            } catch (e) {}
+        }
+
+        function renderPortsTable(netConn) {
+            if (!netConn) return;
+            const badge = document.getElementById('conn-active-badge');
+            const protoBreakdown = document.getElementById('conn-proto-breakdown');
+            if (badge && netConn.total !== undefined) {
+                badge.textContent = `${netConn.total} Active Connections`;
+            }
+            if (protoBreakdown && netConn.tcp !== undefined && netConn.udp !== undefined) {
+                protoBreakdown.textContent = `TCP: ${netConn.tcp} | UDP: ${netConn.udp}`;
+            }
+
+            const tbody = document.getElementById('tbl-top-ports-body');
+            if (tbody && netConn.top_ports && netConn.top_ports.length > 0) {
+                const total = netConn.total || 1;
+                let html = '';
+                netConn.top_ports.forEach(p => {
+                    const pct = Math.min(100, Math.round((p.count / total) * 100));
+                    html += `<tr>
+                        <td style="font-weight: 600; color: #38bdf8;">${p.port}</td>
+                        <td><span class="pill-badge" style="font-size: 10px; padding: 2px 6px;">${p.service || 'Port ' + p.port}</span></td>
+                        <td><b>${p.count}</b> flows</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div style="width: ${pct}%; height: 100%; background: #38bdf8; border-radius: 3px;"></div>
+                                </div>
+                                <span style="font-size: 10px; color: var(--text-muted); width: 28px;">${pct}%</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+        }
+
+        function renderUsageTable() {
+            const pageInfo = document.getElementById('usage-page-info');
+            const btnPrev = document.getElementById('btn-usage-prev');
+            const btnNext = document.getElementById('btn-usage-next');
+            const badge = document.getElementById('usage-count-badge');
+            if (badge) badge.textContent = `${usageTotal.toLocaleString()} Days Logged`;
+
+            if (usageList.length === 0) {
+                setHtmlIfChanged('tbl-usage-body', '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">No daily usage history recorded yet.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = usageList.map(u => `
+                <tr>
+                    <td style="color: #38bdf8; font-weight: 700;">${escapeHtml(u.date)}</td>
+                    <td style="color: #34d399; font-weight: 600;">↓ ${escapeHtml(u.download_formatted)}</td>
+                    <td style="color: #38bdf8; font-weight: 600;">↑ ${escapeHtml(u.upload_formatted)}</td>
+                    <td><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${escapeHtml(u.total_formatted)}</span></td>
+                    <td style="color: var(--text-muted);">${escapeHtml(u.peak_download_speed || '--')}</td>
+                    <td style="color: var(--text-muted);">${escapeHtml(u.peak_upload_speed || '--')}</td>
+                    <td style="color: var(--text-muted);">${formatDateTime(u.last_updated)}</td>
+                </tr>
+            `).join('');
+            setHtmlIfChanged('tbl-usage-body', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${usageCurrentPage} / ${usageTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (usageCurrentPage <= 1);
+            if (btnNext) btnNext.disabled = (usageCurrentPage >= usageTotalPages);
+        }
+
+        function changeUsagePage(delta) {
+            const target = usageCurrentPage + delta;
+            if (target >= 1 && target <= usageTotalPages) {
+                fetchUsageHistory(target);
+            }
+        }
+
+        async function fetchUsageHistory(page = 1) {
+            try {
+                const res = await fetch(`/api/usage/history?page=${page}&limit=${PAGE_SIZE}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    usageList = json.history || [];
+                    if (json.summary) {
+                        usageSummary = json.summary;
+                    }
+                    usageCurrentPage = json.page || page;
+                    usageTotal = json.total || usageList.length;
+                    usageTotalPages = json.total_pages || Math.ceil(usageTotal / PAGE_SIZE) || 1;
+                    renderUsageTable();
+                    renderUsageSummary();
+                }
+            } catch (e) {}
+        }
+
+        function renderUsageSummary() {
+            if (!usageSummary) return;
+            const tm = usageSummary.this_month || {};
+            const lm = usageSummary.last_month || {};
+            const ty = usageSummary.this_year || {};
+            const ly = usageSummary.last_year || {};
+
+            // 1. Update This Month Card
+            setTextIfChanged('sum-this-month-total', tm.total_formatted || '0 B');
+            setTextIfChanged('sum-this-month-dl', tm.download_formatted || '0 B');
+            setTextIfChanged('sum-this-month-ul', tm.upload_formatted || '0 B');
+            setTextIfChanged('sum-this-month-peak', tm.peak_download_speed || '--');
+            setTextIfChanged('sum-this-month-days', `${tm.days_count || 0} active days`);
+            if (tm.period) {
+                const el = document.getElementById('sum-this-month-badge');
+                if (el) el.textContent = tm.period;
+            }
+
+            // 2. Update Last Month Card
+            setTextIfChanged('sum-last-month-total', lm.total_formatted || '0 B');
+            setTextIfChanged('sum-last-month-dl', lm.download_formatted || '0 B');
+            setTextIfChanged('sum-last-month-ul', lm.upload_formatted || '0 B');
+            setTextIfChanged('sum-last-month-peak', lm.peak_download_speed || '--');
+            setTextIfChanged('sum-last-month-days', `${lm.days_count || 0} active days`);
+            if (lm.period) {
+                const el = document.getElementById('sum-last-month-badge');
+                if (el) el.textContent = lm.period;
+            }
+
+            // 3. Update This Year Card
+            setTextIfChanged('sum-this-year-total', ty.total_formatted || '0 B');
+            setTextIfChanged('sum-this-year-dl', ty.download_formatted || '0 B');
+            setTextIfChanged('sum-this-year-ul', ty.upload_formatted || '0 B');
+            setTextIfChanged('sum-this-year-peak', ty.peak_download_speed || '--');
+            setTextIfChanged('sum-this-year-days', `${ty.days_count || 0} active days`);
+            if (ty.period) {
+                const el = document.getElementById('sum-this-year-badge');
+                if (el) el.textContent = ty.period;
+            }
+
+            // 4. Update Last Year Card
+            setTextIfChanged('sum-last-year-total', ly.total_formatted || '0 B');
+            setTextIfChanged('sum-last-year-dl', ly.download_formatted || '0 B');
+            setTextIfChanged('sum-last-year-ul', ly.upload_formatted || '0 B');
+            setTextIfChanged('sum-last-year-peak', ly.peak_download_speed || '--');
+            setTextIfChanged('sum-last-year-days', `${ly.days_count || 0} active days`);
+            if (ly.period) {
+                const el = document.getElementById('sum-last-year-badge');
+                if (el) el.textContent = ly.period;
+            }
+
+            // 5. Update Comparative Table
+            const items = [
+                { title: `📅 ${tm.label || 'This Month'}`, data: tm, color: '#38bdf8' },
+                { title: `⏮️ ${lm.label || 'Last Month'}`, data: lm, color: '#c084fc' },
+                { title: `🗓️ ${ty.label || 'This Year'}`, data: ty, color: '#34d399' },
+                { title: `⏳ ${ly.label || 'Last Year'}`, data: ly, color: '#fb923c' }
+            ];
+
+            const rowsHtml = items.map(item => {
+                const d = item.data;
+                const hasData = (d.days_count > 0 || (d.total_bytes && d.total_bytes > 0));
+                return `
+                    <tr>
+                        <td style="color: ${item.color}; font-weight: 700;">${escapeHtml(item.title)}</td>
+                        <td style="color: #34d399; font-weight: 600;">${hasData ? '↓ ' + escapeHtml(d.download_formatted) : '<span style="color: var(--text-muted);">--</span>'}</td>
+                        <td style="color: #38bdf8; font-weight: 600;">${hasData ? '↑ ' + escapeHtml(d.upload_formatted) : '<span style="color: var(--text-muted);">--</span>'}</td>
+                        <td><span style="background: ${hasData ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.05)'}; color: ${hasData ? '#38bdf8' : 'var(--text-muted)'}; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${hasData ? escapeHtml(d.total_formatted) : '0 B'}</span></td>
+                        <td style="color: var(--text-muted);">${hasData ? escapeHtml(d.peak_download_speed || '--') : '--'}</td>
+                        <td style="color: var(--text-muted);">${hasData ? escapeHtml(d.peak_upload_speed || '--') : '--'}</td>
+                        <td style="color: var(--text-muted);">${d.days_count || 0} active days logged</td>
+                    </tr>
+                `;
+            }).join('');
+            setHtmlIfChanged('tbl-summary-body', rowsHtml);
+        }
+
+        function renderDowntimeTable() {
+            const pageInfo = document.getElementById('downtime-page-info');
+            const btnPrev = document.getElementById('btn-downtime-prev');
+            const btnNext = document.getElementById('btn-downtime-next');
+            const badge = document.getElementById('downtime-count-badge');
+            if (badge) badge.textContent = `${downtimeTotal.toLocaleString()} Recorded`;
+
+            if (downtimeList.length === 0) {
+                setHtmlIfChanged('tbl-downtimes-body', '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 18px;">No downtime recorded.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = downtimeList.map(d => `
+                <tr>
+                    <td style="color: #ef4444; font-weight: 600;">${formatDateTime(d.start_ts)}</td>
+                    <td style="color: #34d399;">${d.end_ts ? formatDateTime(d.end_ts) : '<span style="color: #ef4444; font-weight: 700;">Currently Offline</span>'}</td>
+                    <td style="font-weight: 700; color: #38bdf8;">${escapeHtml(d.duration_str)}</td>
+                    <td><span style="background: ${d.end_ts ? 'rgba(52, 211, 153, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${d.end_ts ? '#34d399' : '#ef4444'}; padding: 2px 8px; border-radius: 6px; font-size: 11px;">${d.end_ts ? 'Restored' : 'Active Offline'}</span></td>
+                </tr>
+            `).join('');
+            setHtmlIfChanged('tbl-downtimes-body', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${downtimeCurrentPage} / ${downtimeTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (downtimeCurrentPage <= 1);
+            if (btnNext) btnNext.disabled = (downtimeCurrentPage >= downtimeTotalPages);
+        }
+
+        function changeDowntimePage(delta) {
+            const target = downtimeCurrentPage + delta;
+            if (target >= 1 && target <= downtimeTotalPages) {
+                fetchDowntimes(target);
+            }
+        }
+
+        async function fetchDowntimes(page = 1) {
+            try {
+                const res = await fetch(`/api/telemetry/downtimes?page=${page}&limit=${PAGE_SIZE}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    downtimeList = json.downtimes || [];
+                    downtimeCurrentPage = json.page || page;
+                    downtimeTotal = json.total || downtimeList.length;
+                    downtimeTotalPages = json.total_pages || Math.ceil(downtimeTotal / PAGE_SIZE) || 1;
+                    renderDowntimeTable();
+                }
+            } catch (e) {}
+        }
+
+        // AT Console Command Dispatching
+        async function sendManualCommand() {
+            const input = document.getElementById('at-input');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+            await dispatchCommand('AT', cmd);
+            input.value = '';
+        }
+
+        async function sendPresetCommand(cmd) {
+            await dispatchCommand('AT', cmd);
+        }
+
+        async function sendRebootCommand() {
+            if (confirm("Are you sure you want to reboot the modem hardware?")) {
+                await dispatchCommand('REBOOT', 'soft_restart');
+            }
+        }
+
+        async function handleSimPinAction(type) {
+            if (type === 'unlock') {
+                const pin = prompt("Enter 4-8 digit SIM PIN to unlock:");
+                if (!pin) return;
+                if (!/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                await dispatchSimPinCommand(`--unlock ${pin}`);
+            } else if (type === 'toggle_lock') {
+                const choice = prompt("Enter '1' to Enable PIN Lock, or '0' to Disable PIN Lock:");
+                if (choice !== '0' && choice !== '1') return;
+                const pin = prompt(`Enter SIM PIN to ${choice === '1' ? 'Enable' : 'Disable'} PIN Lock:`);
+                if (!pin || !/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                await dispatchSimPinCommand(`--set-lock ${choice} ${pin}`);
+            } else if (type === 'change_pin') {
+                const oldPin = prompt("Enter Current SIM PIN:");
+                if (!oldPin || !/^\d{4,8}$/.test(oldPin)) { alert("Current PIN must be 4 to 8 digits"); return; }
+                const newPin = prompt("Enter New SIM PIN (4-8 digits):");
+                if (!newPin || !/^\d{4,8}$/.test(newPin)) { alert("New PIN must be 4 to 8 digits"); return; }
+                const confirmPin = prompt("Confirm New SIM PIN:");
+                if (newPin !== confirmPin) { alert("PINs do not match!"); return; }
+                await dispatchSimPinCommand(`--change-pin ${oldPin} ${newPin}`);
+            } else if (type === 'auto_unlock') {
+                const opt = confirm("Click OK to Save PIN for Boot Auto-Unlock, or Cancel to Clear Saved PIN.");
+                if (opt) {
+                    const pin = prompt("Enter SIM PIN to store securely on modem for boot auto-unlock:");
+                    if (!pin || !/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                    await dispatchSimPinCommand(`--save-auto-unlock ${pin}`);
+                } else {
+                    if (confirm("Clear stored auto-unlock PIN from modem?")) {
+                        await dispatchSimPinCommand(`--clear-auto-unlock`);
+                    }
+                }
+            } else if (type === 'puk') {
+                const puk = prompt("⚠️ CAUTION: Entering wrong PUK 10 times will permanently destroy your SIM card!\nEnter 8-digit PUK code:");
+                if (!puk || !/^\d{8}$/.test(puk)) { alert("PUK must be exactly 8 digits"); return; }
+                const newPin = prompt("Enter New SIM PIN to set (4-8 digits):");
+                if (!newPin || !/^\d{4,8}$/.test(newPin)) { alert("New PIN must be 4 to 8 digits"); return; }
+                await dispatchSimPinCommand(`--puk-unlock ${puk} ${newPin}`);
+            }
+        }
+
+        async function dispatchSimPinCommand(payload) {
+            const alertBox = document.getElementById('sim-action-alert');
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = 'rgba(56, 189, 248, 0.1)';
+                alertBox.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+                alertBox.style.color = '#38bdf8';
+                alertBox.textContent = '⏳ Queued SIM PIN command to modem... Waiting for modem execution...';
+            }
+            try {
+                const res = await fetch('/api/command/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ command_type: 'SIM_PIN', payload: payload })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    pollSimPinResult(data.command_id);
+                } else {
+                    if (alertBox) {
+                        alertBox.style.background = 'rgba(239, 68, 68, 0.1)';
+                        alertBox.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                        alertBox.style.color = '#f87171';
+                        alertBox.textContent = `❌ Failed to queue command: HTTP ${res.status}`;
+                    }
+                }
+            } catch (e) {
+                if (alertBox) {
+                    alertBox.style.background = 'rgba(239, 68, 68, 0.1)';
+                    alertBox.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                    alertBox.style.color = '#f87171';
+                    alertBox.textContent = `❌ Network error: ${e.message}`;
+                }
+            }
+        }
+
+        async function pollSimPinResult(cmdId, attempts = 0) {
+            const alertBox = document.getElementById('sim-action-alert');
+            if (attempts > 20) {
+                if (alertBox) alertBox.textContent = '⚠️ Command timed out waiting for modem response.';
+                return;
+            }
+            try {
+                const res = await fetch('/api/command/history', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const cmd = (data.history || []).find(c => c.id === cmdId);
+                    if (cmd && cmd.status !== 'pending' && cmd.status !== 'running') {
+                        if (alertBox) {
+                            const isErr = cmd.status === 'error' || (cmd.output && (cmd.output.toLowerCase().includes('error') || cmd.output.toLowerCase().includes('failed')));
+                            alertBox.style.background = isErr ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                            alertBox.style.borderColor = isErr ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+                            alertBox.style.color = isErr ? '#f87171' : '#34d399';
+                            alertBox.textContent = `${isErr ? '❌' : '✅'} ${cmd.output || 'Command completed successfully.'}`;
+                        }
+                        fetchLive();
+                        return;
+                    }
+                }
+            } catch (e) {}
+            setTimeout(() => pollSimPinResult(cmdId, attempts + 1), 1500);
+        }
+
+        async function dispatchCommand(type, payload) {
+            const screen = document.getElementById('terminal-screen');
+            screen.textContent += `\n> [${type}] ${payload}\n> Queued. Waiting for modem poll...`;
+            screen.scrollTop = screen.scrollHeight;
+
+            try {
+                const res = await fetch('/api/command/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ command_type: type, payload: payload })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const cmdId = data.command_id;
+                    pollCommandResult(cmdId);
+                } else {
+                    screen.textContent += `\n> Error sending command: HTTP ${res.status}`;
+                }
+            } catch (e) {
+                screen.textContent += `\n> Connection error: ${e.message}`;
+            }
+        }
+
+        async function pollCommandResult(cmdId, attempts = 0) {
+            if (attempts > 15) return;
+            try {
+                const res = await fetch('/api/command/history', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const cmd = (data.history || []).find(c => c.id === cmdId);
+                    if (cmd && cmd.status !== 'pending' && cmd.status !== 'running') {
+                        const screen = document.getElementById('terminal-screen');
+                        screen.textContent += `\n--- Output ---\n${cmd.output || 'OK'}\n> Completed in ${cmd.executed_at - cmd.created_at}s.`;
+                        screen.scrollTop = screen.scrollHeight;
+                        return;
+                    }
+                }
+            } catch (e) {}
+            setTimeout(() => pollCommandResult(cmdId, attempts + 1), 1500);
+        }
+
+        // SMS & USSD
+        async function fetchSMS() {
+            try {
+                const res = await fetch('/api/sms/inbox', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const msgs = data.messages || [];
+                    document.getElementById('sms-count-badge').textContent = msgs.length + ' Messages';
+                    const tbody = document.getElementById('tbl-sms-body');
+                    if (msgs.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No messages received.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = msgs.map(m => `
+                        <tr>
+                            <td style="color: #38bdf8; font-weight: 700;">${m.sender}</td>
+                            <td>
+                                <div>${m.message}</div>
+                                ${m.is_otp ? '<span class="pill-active" style="margin-top: 4px;">2FA / OTP Code</span>' : ''}
+                            </td>
+                            <td>${m.date || formatDateTime(m.timestamp)}</td>
+                            <td>
+                                <button class="btn-page" onclick="navigator.clipboard.writeText('${m.message.replace(/'/g, "\\'")}')">📋 Copy</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {}
+        }
+
+        async function sendUSSD() {
+            const code = document.getElementById('ussd-input').value.trim();
+            const box = document.getElementById('ussd-result-box');
+            if (!code) return;
+            box.textContent = "Dialing USSD via modem...";
+            try {
+                const res = await fetch('/api/ussd/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ code: code })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    pollUSSDResult(data.command_id);
+                }
+            } catch (e) {
+                box.textContent = "Error: " + e.message;
+            }
+        }
+
+        async function pollUSSDResult(cmdId, attempts = 0) {
+            const box = document.getElementById('ussd-result-box');
+            if (attempts > 12) { box.textContent = "USSD timed out or queued."; return; }
+            try {
+                const res = await fetch('/api/command/history', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const cmd = (data.history || []).find(c => c.id === cmdId);
+                    if (cmd && cmd.status !== 'pending' && cmd.status !== 'running') {
+                        box.textContent = cmd.output || "USSD query completed.";
+                        return;
+                    }
+                }
+            } catch (e) {}
+            setTimeout(() => pollUSSDResult(cmdId, attempts + 1), 1500);
+        }
+
+        async function sendSMS() {
+            const num = document.getElementById('sms-num-input').value.trim();
+            const msg = document.getElementById('sms-msg-input').value.trim();
+            const box = document.getElementById('sms-status-box');
+            if (!num || !msg) return;
+            box.textContent = "Queueing SMS send...";
+            try {
+                const res = await fetch('/api/sms/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ recipient: num, message: msg })
+                });
+                if (res.ok) {
+                    box.textContent = "SMS queued for dispatch.";
+                    document.getElementById('sms-msg-input').value = '';
+                }
+            } catch (e) {
+                box.textContent = "Error: " + e.message;
+            }
+        }
+
+        // Alerts & Events
+        function renderAlertsTable() {
+            const cntBadge = document.getElementById('alerts-count-badge');
+            const pageInfo = document.getElementById('alerts-page-info');
+            const btnPrev = document.getElementById('btn-alerts-prev');
+            const btnNext = document.getElementById('btn-alerts-next');
+
+            if (cntBadge) cntBadge.textContent = alertsTotal.toLocaleString() + ' Events';
+
+            if (alertsList.length === 0) {
+                setHtmlIfChanged('tbl-alerts-body', '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No alert events recorded.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = alertsList.map(a => {
+                const pill = a.severity === 'critical' ? 'pill-crit' : (a.severity === 'warning' ? 'pill-warn' : 'pill-active');
+                return `
+                    <tr>
+                        <td><span class="${pill}">${(a.severity || 'INFO').toUpperCase()}</span></td>
+                        <td style="font-weight: 700; color: #fff;">${escapeHtml(a.title || 'Event')}</td>
+                        <td>${escapeHtml(a.message || '')}</td>
+                        <td style="color: var(--text-muted); font-size: 11px;">${formatDateTime(a.timestamp)}</td>
+                    </tr>
+                `;
+            }).join('');
+            setHtmlIfChanged('tbl-alerts-body', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${alertsCurrentPage} / ${alertsTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (alertsCurrentPage <= 1);
+            if (btnNext) btnNext.disabled = (alertsCurrentPage >= alertsTotalPages);
+        }
+
+        function changeAlertsPage(delta) {
+            const target = alertsCurrentPage + delta;
+            if (target >= 1 && target <= alertsTotalPages) {
+                fetchAlerts(target);
+            }
+        }
+
+        async function fetchAlerts(page = 1) {
+            try {
+                const res = await fetch(`/api/alerts?page=${page}&limit=${PAGE_SIZE}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    alertsList = data.alerts || [];
+                    alertsCurrentPage = data.page || page;
+                    alertsTotal = data.total || alertsList.length;
+                    alertsTotalPages = data.total_pages || Math.ceil(alertsTotal / PAGE_SIZE) || 1;
+                    renderAlertsTable();
+                }
+                const cfgRes = await fetch('/api/alerts/config', { headers: getAuthHeaders() });
+                if (cfgRes.ok) {
+                    const cfg = await cfgRes.json();
+                    if (cfg.telegram_configured) {
+                        const tgChat = document.getElementById('tg-chat-input');
+                        if (tgChat) tgChat.value = cfg.chat_id || '';
+                        const tgStatus = document.getElementById('tg-status-box');
+                        if (tgStatus) tgStatus.textContent = "Telegram bot active (" + cfg.masked_token + ")";
+                    }
+                }
+            } catch (e) {
+                console.error("fetchAlerts error:", e);
+            }
+        }
+
+        async function saveTelegramConfig() {
+            const token = document.getElementById('tg-token-input').value.trim();
+            const chat = document.getElementById('tg-chat-input').value.trim();
+            const box = document.getElementById('tg-status-box');
+            if (!token || !chat) {
+                box.textContent = "Please provide both token and chat ID.";
+                return;
+            }
+            try {
+                const res = await fetch('/api/alerts/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                    body: JSON.stringify({ telegram_bot_token: token, telegram_chat_id: chat })
+                });
+                if (res.ok) {
+                    box.textContent = "Telegram configuration saved!";
+                }
+            } catch (e) {
+                box.textContent = "Error: " + e.message;
+            }
+        }
+
+        // Backups
+        async function fetchBackups() {
+            try {
+                const res = await fetch('/api/backup/list', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const backups = data.backups || [];
+                    const tbody = document.getElementById('tbl-backups-body');
+                    if (backups.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No backups stored. Click "Create Backup Snapshot" to generate one.</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = backups.map(b => `
+                        <tr>
+                            <td style="color: #38bdf8; font-weight: 700;">${b.filename}</td>
+                            <td>${(b.size_bytes / 1024).toFixed(1)} KB</td>
+                            <td>${formatDateTime(b.timestamp)}</td>
+                            <td>
+                                <a href="/api/backup/download?id=${b.id}&key=${encodeURIComponent(authKey)}" class="btn-page" style="text-decoration: none;">⬇️ Download</a>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) {}
+        }
+
+        async function triggerBackup() {
+            try {
+                const res = await fetch('/api/backup/trigger', {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders() }
+                });
+                if (res.ok) {
+                    alert("Backup snapshot command queued. Modem will pack /data/simpleadmin and upload within ~5 seconds.");
+                    setTimeout(fetchBackups, 6000);
+                }
+            } catch (e) {
+                alert("Error triggering backup: " + e.message);
+            }
+        }
+
+        // DNS Telemetry & Analytics Frontend Handler
+        let rawDnsFeedData = [];
+
+        async function fetchDns() {
+            const isDnsTabActive = document.getElementById('tab-dns')?.classList.contains('active');
+            try {
+                const res = await fetch('/api/telemetry/dns', { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const d = await res.json();
+                    updateDnsUI(d);
+                }
+                if (isDnsTabActive) {
+                    const searchInput = document.getElementById('dns-search-filter');
+                    if (document.activeElement !== searchInput) {
+                        fetchDnsQueries(dnsQueriesPage);
+                    }
+                }
+            } catch (e) {
+                console.error("fetchDns error:", e);
+            }
+        }
+
+        function updateDnsUI(d) {
+            if (!d) return;
+
+            // Header profile badge
+            const prof = d.profile || 'cloudflare';
+            const profLabels = {
+                'cloudflare': 'Cloudflare DNS (Dual-Stack IPv4 + IPv6)',
+                'google': 'Google Public DNS (Dual-Stack)',
+                'adguard': 'AdGuard DNS (Ad-Block & Trackers)',
+                'quad9': 'Quad9 DNS (Malware Protection)',
+                'auto': 'Carrier Default DNS (Jio True5G)'
+            };
+            setTextIfChanged('dns-badge-profile', profLabels[prof] || prof);
+
+            // 4 KPI Cards
+            const totalQ = d.total_queries || 0;
+            const blockedQ = d.blocked_queries || 0;
+            const cachedQ = d.cached_queries || 0;
+            const forwardedQ = d.forwarded_queries || (totalQ - blockedQ - cachedQ);
+            const allowedQ = Math.max(0, totalQ - blockedQ);
+            const qpm = (d.queries_per_min !== undefined && d.queries_per_min !== null && d.queries_per_min !== "") ? d.queries_per_min : ((d.qpm !== undefined && d.qpm !== null && d.qpm !== "") ? d.qpm : 0);
+
+            setTextIfChanged('dns-kpi-qpm', `${qpm} q/min`);
+            setTextIfChanged('dns-kpi-total', totalQ.toLocaleString());
+            setTextIfChanged('dns-kpi-allowed', allowedQ.toLocaleString());
+            setTextIfChanged('dns-kpi-blocked', blockedQ.toLocaleString());
+            setTextIfChanged('dns-kpi-cached', cachedQ.toLocaleString());
+
+            const blockRate = d.block_rate_percent || (totalQ > 0 ? ((blockedQ / totalQ) * 100).toFixed(1) : '0.0');
+            const cacheRate = d.cache_rate_percent || (totalQ > 0 ? ((cachedQ / totalQ) * 100).toFixed(1) : '0.0');
+
+            setTextIfChanged('dns-kpi-block-rate', `${blockRate}% Blocked`);
+            setTextIfChanged('dns-kpi-cache-rate', `${cacheRate}% Hits`);
+            setTextIfChanged('dns-kpi-blocklist-count', d.blocked_domains_count ? `${d.blocked_domains_count.toLocaleString()} Domains` : '--');
+            setTextIfChanged('dns-kpi-capacity', d.capacity ? `${d.capacity} RAM` : '10,000 RAM');
+            setTextIfChanged('dns-kpi-ram-latency', d.cache_latency ? `${d.cache_latency} ms` : '~0.2 ms');
+            setTextIfChanged('dns-kpi-min-ttl', d.min_ttl ? `${d.min_ttl}s` : '300s (5m)');
+            setTextIfChanged('dns-kpi-upstream-name', prof === 'cloudflare' ? 'Cloudflare' : (prof === 'google' ? 'Google' : (prof === 'adguard' ? 'AdGuard' : (prof === 'quad9' ? 'Quad9' : 'DNS'))));
+            setTextIfChanged('dns-kpi-upstream-ipv6', d.ipv6_primary || (prof === 'cloudflare' ? '2606:4700::1111' : (prof === 'google' ? '2001:4860:4860::8888' : '--')));
+
+            const primaryIp = d.primary || '1.1.1.1';
+            const secondaryIp = d.secondary || '1.0.0.1';
+            setTextIfChanged('dns-kpi-upstream-ip', `${primaryIp} / ${secondaryIp}`);
+            if (d.ping) {
+                const p = d.ping.toString();
+                setTextIfChanged('dns-kpi-upstream-ping', p.includes('ms') ? p : (p + ' ms'));
+            }
+
+            // Top 10 Resolved Domains Table
+            const topResolved = d.top_resolved || [];
+            let resolvedHtml = '';
+            if (topResolved.length === 0) {
+                resolvedHtml = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">No queries resolved yet.</td></tr>';
+            } else {
+                resolvedHtml = topResolved.slice(0, 10).map((item, idx) => {
+                    const pct = totalQ > 0 ? ((item.count / totalQ) * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 11px;">#${idx + 1}</td>
+                            <td style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(item.domain)}</td>
+                            <td style="font-weight: 700; font-family: var(--font-mono);">${item.count.toLocaleString()}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div style="flex: 1; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; max-width: 70px;">
+                                        <div style="width: ${Math.min(100, pct)}%; height: 100%; background: #38bdf8;"></div>
+                                    </div>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${pct}%</span>
+                                </div>
+                            </td>
+                            <td><span class="card-badge green" style="font-size: 10px; padding: 2px 6px;">Allowed</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            setHtmlIfChanged('tbl-dns-top-resolved', resolvedHtml);
+
+            // Top 10 Blocked Ad / Tracker Domains Table
+            const topBlocked = d.top_blocked || [];
+            let blockedHtml = '';
+            if (topBlocked.length === 0) {
+                blockedHtml = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 18px;">No ad domains sinkholed yet.</td></tr>';
+            } else {
+                blockedHtml = topBlocked.slice(0, 10).map((item, idx) => {
+                    let cat = "Advertising";
+                    if (item.domain.includes("telemetry") || item.domain.includes("analytics")) cat = "Telemetry / Tracker";
+                    else if (item.domain.includes("facebook") || item.domain.includes("tiktok") || item.domain.includes("meta")) cat = "Social Tracking";
+                    else if (item.domain.includes("doubleclick") || item.domain.includes("pagead") || item.domain.includes("syndication")) cat = "Ad Network";
+
+                    return `
+                        <tr>
+                            <td style="color: var(--text-muted); font-size: 11px;">#${idx + 1}</td>
+                            <td style="font-weight: 700; color: #f87171; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(item.domain)}</td>
+                            <td style="font-weight: 700; font-family: var(--font-mono); color: #f87171;">${item.count.toLocaleString()}</td>
+                            <td style="font-size: 11px; color: var(--text-muted);">${cat}</td>
+                            <td><span class="card-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; padding: 2px 6px;">🛑 Sinkholed</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+            setHtmlIfChanged('tbl-dns-top-blocked', blockedHtml);
+        }
+
+        function renderDnsLiveFeed(list) {
+            const pageInfo = document.getElementById('dns-page-info');
+            const btnPrev = document.getElementById('btn-dns-prev');
+            const btnNext = document.getElementById('btn-dns-next');
+
+            if (!list || list.length === 0) {
+                setHtmlIfChanged('tbl-dns-live-feed', '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No query log records found.</td></tr>');
+                if (pageInfo) pageInfo.textContent = '1 / 1';
+                if (btnPrev) btnPrev.disabled = true;
+                if (btnNext) btnNext.disabled = true;
+                return;
+            }
+
+            const rowsHtml = list.map(q => {
+                let badge = '<span class="card-badge green" style="font-size: 10px; padding: 2px 6px;">🌐 RESOLVED</span>';
+                let lat = (q.latency_ms !== undefined && q.latency_ms !== null) ? `${q.latency_ms} ms` : (q.latency ? String(q.latency) : '--');
+                let domColor = '#38bdf8';
+
+                if (q.status === 'BLOCKED') {
+                    badge = '<span class="card-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; padding: 2px 6px;">🛑 BLOCKED</span>';
+                    lat = '<b style="color: #f87171;">0.1 ms (Sinkhole)</b>';
+                    domColor = '#f87171';
+                } else if (q.status === 'CACHED') {
+                    badge = '<span class="card-badge green" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; padding: 2px 6px;">⚡ RAM CACHED</span>';
+                    lat = '<b style="color: #34d399;">0.2 ms (RAM)</b>';
+                    domColor = '#34d399';
+                }
+
+                const timeStr = q.time || (q.timestamp ? formatTime(q.timestamp) : '--:--:--');
+                const clientIp = q.client || '--';
+                const qType = q.type || 'A';
+
+                return `
+                    <tr>
+                        <td style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">${escapeHtml(timeStr)}</td>
+                        <td style="font-family: var(--font-mono); font-size: 11px; color: #a78bfa;">${escapeHtml(clientIp)}</td>
+                        <td><span class="card-badge purple" style="font-size: 10px; padding: 1px 5px;">${escapeHtml(qType)}</span></td>
+                        <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: ${domColor};">${escapeHtml(q.domain)}</td>
+                        <td style="font-family: var(--font-mono); font-size: 11px;">${lat}</td>
+                        <td>${badge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            setHtmlIfChanged('tbl-dns-live-feed', rowsHtml);
+
+            if (pageInfo) pageInfo.textContent = `${dnsQueriesPage} / ${dnsQueriesTotalPages}`;
+            if (btnPrev) btnPrev.disabled = (dnsQueriesPage <= 1);
+            if (btnNext) btnNext.disabled = (dnsQueriesPage >= dnsQueriesTotalPages);
+        }
+
+        function changeDnsQueriesPage(delta) {
+            const target = dnsQueriesPage + delta;
+            if (target >= 1 && target <= dnsQueriesTotalPages) {
+                fetchDnsQueries(target);
+            }
+        }
+
+        async function fetchDnsQueries(page = 1) {
+            const query = (document.getElementById('dns-search-filter')?.value || '').trim();
+            const statusFilter = document.getElementById('dns-type-filter')?.value || 'ALL';
+            try {
+                const res = await fetch(`/api/telemetry/dns/queries?page=${page}&limit=25&status=${encodeURIComponent(statusFilter)}&search=${encodeURIComponent(query)}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const json = await res.json();
+                    dnsQueriesList = json.queries || [];
+                    dnsQueriesPage = json.page || page;
+                    dnsQueriesTotal = json.total || dnsQueriesList.length;
+                    dnsQueriesTotalPages = json.total_pages || Math.ceil(dnsQueriesTotal / 25) || 1;
+                    renderDnsLiveFeed(dnsQueriesList);
+                }
+            } catch (e) {
+                console.error("fetchDnsQueries error:", e);
+            }
+        }
+
+        let dnsSearchDebounceTimer = null;
+        function filterDnsQueryFeed() {
+            clearTimeout(dnsSearchDebounceTimer);
+            dnsSearchDebounceTimer = setTimeout(() => {
+                fetchDnsQueries(1);
+            }, 250);
+        }
+
+        function setDnsTestChipVPS(dom) {
+            const inp = document.getElementById('dns-test-input-vps');
+            if (inp) {
+                inp.value = dom;
+                runDnsBenchmarkVPS();
+            }
+        }
+
+        async function runDnsBenchmarkVPS() {
+            const inp = document.getElementById('dns-test-input-vps');
+            const resBox = document.getElementById('dns-benchmark-res');
+            if (!inp || !resBox) return;
+
+            const domain = inp.value.trim();
+            if (!domain) return;
+
+            resBox.innerHTML = `<span style="color: var(--primary);">⏳ Resolving and benchmarking <b>${escapeHtml(domain)}</b> against dual-stack upstream servers...</span>`;
+
+            try {
+                const res = await fetch(`/api/dns/test?domain=${encodeURIComponent(domain)}`, { headers: getAuthHeaders() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const isBlk = data.blocked === 1;
+                    const statusBadge = isBlk 
+                        ? '<span style="color: #f87171; font-weight: 800;">[🛑 SINKHOLED BY AD-BLOCKER]</span>' 
+                        : '<span style="color: #34d399; font-weight: 800;">[✅ RESOLVED / SAFE]</span>';
+
+                    const v4List = data.ipv4_records?.length ? data.ipv4_records.join(', ') : 'None';
+                    const v6List = data.ipv6_records?.length ? data.ipv6_records.join(', ') : 'None';
+
+                    resBox.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap;">
+                            <div><b>Domain:</b> <span style="color: #38bdf8;">${escapeHtml(data.domain)}</span> ${statusBadge}</div>
+                            <div><b>Response Latency:</b> <span style="color: #34d399; font-weight: 800;">${data.elapsed_ms} ms</span></div>
+                        </div>
+                        <div style="margin-top: 4px; color: #94a3b8;"><b>IPv4 A Records:</b> <span style="color: #f8fafc;">${escapeHtml(v4List)}</span></div>
+                        <div style="margin-top: 4px; color: #94a3b8;"><b>IPv6 AAAA Records:</b> <span style="color: #f8fafc;">${escapeHtml(v6List)}</span></div>
+                    `;
+                    fetchDns();
+                } else {
+                    resBox.innerHTML = `<span style="color: var(--danger);">Failed to query DNS benchmark: HTTP ${res.status}</span>`;
+                }
+            } catch (err) {
+                resBox.innerHTML = `<span style="color: var(--danger);">Benchmark error: ${err.message}</span>`;
+            }
+        }
+
+        function startSSE() {
+            if (eventSource) eventSource.close();
+            const sseUrl = '/api/telemetry/stream' + (authKey ? '?key=' + encodeURIComponent(authKey) : '');
+            eventSource = new EventSource(sseUrl);
+
+            eventSource.onmessage = (e) => {
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type === 'telemetry') {
+                        updateLiveUI(msg);
+                    } else if (msg.type === 'alert') {
+                        fetchAlerts();
+                    }
+                } catch (err) {}
+            };
+
+            eventSource.onerror = () => {
+                const badge = document.getElementById('badge-stream-status');
+                const txt = document.getElementById('txt-stream-status');
+                if (badge) badge.className = 'live-status offline';
+                if (txt) txt.textContent = 'Stream Reconnecting...';
+            };
+
+            eventSource.onopen = () => {
+                const badge = document.getElementById('badge-stream-status');
+                const txt = document.getElementById('txt-stream-status');
+                if (badge) badge.className = 'live-status';
+                if (txt) txt.textContent = 'Live Stream Active';
+            };
+        }
+
+        function setRange(r) {
+            currentRange = r;
+            document.querySelectorAll('.btn-range').forEach(b => {
+                b.className = b.textContent.toLowerCase() === r ? 'btn-range active' : 'btn-range';
+            });
+            fetchHistory();
+        }
+
+        function initApp() {
+            hideAuthOverlay();
+            const hash = window.location.hash.replace("#", "");
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetTab = hash || urlParams.get("tab");
+            if (targetTab && ["telemetry", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
+                switchTab(targetTab);
+            }
+            initCharts();
+            fetchLive();
+            fetchHistory();
+            fetchIPs();
+            fetchTowers();
+            fetchUsageHistory();
+            fetchDowntimes();
+            fetchDns();
+            fetchAlerts();
+            startSSE();
+
+            setInterval(updateSyncTickers, 1000);
+            setInterval(fetchLive, 5000);
+            setInterval(fetchDns, 8000);
+            setInterval(fetchHistory, 15000);
+            setInterval(fetchAlerts, 15000);
+            setInterval(fetchIPs, 30000);
+            setInterval(fetchTowers, 30000);
+            setInterval(fetchUsageHistory, 30000);
+            setInterval(fetchDowntimes, 30000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/api/telemetry/live', { headers: getAuthHeaders() })
+                .then(res => {
+                    if (res.status === 401) {
+                        showAuthOverlay();
+                    } else {
+                        initApp();
+                    }
+                })
+                .catch(() => {
+                    initApp();
+                });
+        });
+    </script>
+</body>
+</html>

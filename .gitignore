@@ -1,0 +1,23 @@
+# Secrets and environment files
+.env
+*.key
+*.pem
+wallet/
+*.wallet.zip
+
+# Databases & logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+data/
+
+# Temporary and runtime files
+*.tmp
+*.lock
+__pycache__/
+*.pyc
+.DS_Store
+
+# Session state
+gw_sessions/

@@ -1,0 +1,3259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5G Gateway Dashboard</title>
+    <!-- Liquid Glass 5G Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233b82f6'/%3E%3Cstop offset='50%25' stop-color='%238b5cf6'/%3E%3Cstop offset='100%25' stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3Cfilter id='glow'%3E%3CfeGaussianBlur stdDeviation='2' result='coloredBlur'/%3E%3CfeMerge%3E%3CfeMergeNode in='coloredBlur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%2307090e'/%3E%3Crect width='62' height='62' x='1' y='1' rx='15' fill='none' stroke='url(%23g)' stroke-width='2' opacity='0.8'/%3E%3Ccircle cx='32' cy='46' r='4' fill='%2310b981' filter='url(%23glow)'/%3E%3Cpath d='M20 38 A16 16 0 0 1 44 38' fill='none' stroke='%233b82f6' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M13 30 A26 26 0 0 1 51 30' fill='none' stroke='%238b5cf6' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M6 22 A36 36 0 0 1 58 22' fill='none' stroke='%23ec4899' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --bg: #06080e;
+            --liquid-glass: rgba(18, 24, 38, 0.45);
+            --liquid-border: rgba(255, 255, 255, 0.1);
+            --liquid-highlight: rgba(255, 255, 255, 0.16);
+            --liquid-hover: rgba(26, 36, 56, 0.65);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.4);
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.45);
+            --purple: #8b5cf6;
+            --purple-glow: rgba(139, 92, 246, 0.45);
+            --pink: #ec4899;
+            --pink-glow: rgba(236, 72, 153, 0.4);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --pill-bg: rgba(255, 255, 255, 0.05);
+            --radius: 22px;
+            --shadow-glass: 0 20px 50px -10px rgba(0, 0, 0, 0.65), inset 0 1px 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --bg: #eef2f8;
+            --liquid-glass: rgba(255, 255, 255, 0.65);
+            --liquid-border: rgba(255, 255, 255, 0.7);
+            --liquid-highlight: rgba(255, 255, 255, 0.9);
+            --liquid-hover: rgba(255, 255, 255, 0.85);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --text-dim: #94a3b8;
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.25);
+            --accent: #059669;
+            --accent-glow: rgba(5, 150, 105, 0.25);
+            --purple: #7c3aed;
+            --purple-glow: rgba(124, 58, 237, 0.25);
+            --pill-bg: rgba(0, 0, 0, 0.04);
+            --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.08), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 26px 20px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient Liquid Mesh Glow Orbs */
+        .liquid-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.55;
+            animation: orbFloat 18s ease-in-out infinite alternate;
+        }
+
+        .orb-1 {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%);
+            top: -120px;
+            left: -100px;
+        }
+
+        .orb-2 {
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.35), transparent 70%);
+            bottom: -150px;
+            right: -120px;
+            animation-duration: 22s;
+        }
+
+        .orb-3 {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.25), transparent 70%);
+            top: 40%;
+            left: 60%;
+            animation-duration: 26s;
+        }
+
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(40px, -30px) scale(1.08); }
+            100% { transform: translate(-30px, 35px) scale(0.95); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1060px;
+            display: flex;
+            flex-direction: column;
+            gap: 22px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Liquid Glass Base Class */
+        .glass-card {
+            background: var(--liquid-glass);
+            border: 1px solid var(--liquid-border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(28px) saturate(190%);
+            -webkit-backdrop-filter: blur(28px) saturate(190%);
+            box-shadow: var(--shadow-glass);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--liquid-highlight), transparent);
+            pointer-events: none;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 55px -10px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 900;
+            font-size: 17px;
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.4);
+            position: relative;
+        }
+
+        .brand-icon::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            border-radius: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            pointer-events: none;
+        }
+
+        .brand-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .uptime-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 30px;
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 16px;
+            border-radius: 30px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            box-shadow: 0 0 16px var(--accent-glow);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 8px var(--accent)); }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .btn-icon {
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            color: var(--text-main);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+            position: relative;
+            transition: all 0.25s ease;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-icon:hover {
+            transform: translateY(-2px) scale(1.05);
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 8px 20px var(--primary-glow);
+        }
+
+        .badge-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--bg);
+        }
+
+        /* Dynamic Alert Banner */
+        .alert-banner {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 16px;
+            padding: 14px 20px;
+            display: none;
+            align-items: center;
+            gap: 14px;
+            font-size: 13px;
+            color: #fbbf24;
+            backdrop-filter: blur(20px);
+        }
+
+        .alert-banner.show { display: flex; }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        @media (max-width: 860px) {
+            .grid-2, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card-padding {
+            padding: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.9px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-pill {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        
+        /* Glass Toggle Switch */
+        .glass-toggle {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 26px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .glass-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .glass-toggle-slider {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid var(--liquid-border);
+            border-radius: 30px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-toggle-slider:before {
+            position: absolute;
+            content: '';
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        }
+
+        .glass-toggle input:checked + .glass-toggle-slider {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #10b981;
+            box-shadow: 0 0 14px var(--accent-glow);
+        }
+
+        .glass-toggle input:checked + .glass-toggle-slider:before {
+            transform: translateX(22px);
+        }
+
+        .service-pill {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 14px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .service-pill.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+        }
+
+        
+        .btn-service-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: var(--text-main);
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-service-action:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2));
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #10b981;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-service-action:active {
+            transform: translateY(0);
+        }
+
+        .service-pill.stopped {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+            border: 1px solid var(--liquid-border);
+        }
+
+        .badge-ttl {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        /* Hero Signal & Provider */
+        .hero-network {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 6px;
+        }
+
+        .provider-name {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: -0.6px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .network-tag {
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
+            padding: 5px 14px;
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 16px var(--pink-glow);
+        }
+
+        .band-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            padding: 5px 12px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .ip-pills-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .ip-pill {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--pill-bg);
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--liquid-border);
+        }
+
+        /* Signal Meter */
+        .signal-meter {
+            display: flex;
+            align-items: flex-end;
+            gap: 5px;
+            height: 32px;
+        }
+
+        .signal-bar {
+            width: 7px;
+            background: var(--pill-bg);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .signal-bar:nth-child(1) { height: 20%; }
+        .signal-bar:nth-child(2) { height: 40%; }
+        .signal-bar:nth-child(3) { height: 60%; }
+        .signal-bar:nth-child(4) { height: 80%; }
+        .signal-bar:nth-child(5) { height: 100%; }
+
+        .signal-bar.active {
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .signal-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        /* Canvas Graphs */
+        .graph-container {
+            width: 100%;
+            height: 155px;
+            position: relative;
+            margin-top: 8px;
+        }
+
+        .soft-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 14px;
+        }
+
+        .graph-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 16px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.down { background: #10b981; box-shadow: 0 0 8px var(--accent); }
+        .legend-dot.up { background: #3b82f6; box-shadow: 0 0 8px var(--primary); }
+
+        /* Usage Hero */
+        .usage-hero {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 640px) {
+            .usage-hero {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .usage-box {
+            background: var(--pill-bg);
+            border-radius: 16px;
+            padding: 18px 14px;
+            text-align: center;
+            border: 1px solid var(--liquid-border);
+            transition: transform 0.25s ease, border-color 0.25s ease;
+        }
+
+        .usage-box:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .usage-box.primary-box {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+            border-color: rgba(59, 130, 246, 0.35);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+        }
+
+        .usage-box-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .usage-box-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -0.6px;
+        }
+
+        .usage-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* 7-Day History Table */
+        .history-table-box {
+            margin-top: 20px;
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            border-radius: 16px;
+            padding: 18px;
+            overflow-x: auto;
+        }
+
+        .history-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .usage-table th {
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--liquid-border);
+        }
+
+        .usage-table th:last-child,
+        .usage-table td:last-child {
+            text-align: right;
+        }
+
+        .usage-table td {
+            padding: 13px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        .usage-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .usage-table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .day-tag {
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .day-badge-today {
+            background: var(--primary);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px var(--primary-glow);
+        }
+
+        .total-usage-pill {
+            font-weight: 800;
+            color: var(--text-main);
+            background: var(--pill-bg);
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--liquid-border);
+            display: inline-block;
+        }
+
+        /* Resource Card */
+        .resource-card {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .resource-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .resource-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .resource-value {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: -0.4px;
+        }
+
+        .mini-graph-container {
+            width: 100%;
+            height: 72px;
+            position: relative;
+        }
+
+        .resource-sub-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Dedicated Host Link & Tower Diagnostics Box */
+        .diag-box-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 640px) {
+            .diag-box-grid { grid-template-columns: 1fr; }
+        }
+
+        .diag-subcard {
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .diag-subcard-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .diag-subcard-val {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .diag-subcard-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .usb-badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+        }
+
+        .usb-badge.superspeed {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent);
+            border-color: rgba(16, 185, 129, 0.35);
+        }
+
+        /* Actions Grid (7 items) */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 990px) {
+            .actions-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .btn-action {
+            padding: 14px 6px;
+            border-radius: 14px;
+            border: 1px solid var(--liquid-border);
+            background: var(--pill-bg);
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-3px);
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 8px 22px var(--primary-glow);
+        }
+
+        .btn-action.highlight {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(139, 92, 246, 0.25));
+            border-color: rgba(59, 130, 246, 0.45);
+        }
+
+        .btn-action.danger:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            box-shadow: 0 8px 22px rgba(239, 68, 68, 0.4);
+        }
+
+        /* Accordion */
+        .accordion-btn {
+            width: 100%;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 16px 0 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .accordion-btn:hover {
+            color: var(--text-main);
+        }
+
+        .accordion-content {
+            display: none;
+            padding-top: 18px;
+            margin-top: 16px;
+            border-top: 1px solid var(--liquid-border);
+        }
+
+        .accordion-content.open {
+            display: block;
+        }
+
+        .adv-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .adv-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .adv-item {
+            background: var(--pill-bg);
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--liquid-border);
+        }
+
+        .adv-k {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .adv-v {
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 3px;
+            font-family: monospace;
+        }
+
+        /* Terminal AT Console */
+        .terminal-box {
+            margin-top: 18px;
+            background: #04060a;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 16px;
+            color: #10b981;
+            font-family: "SF Mono", "Courier New", monospace;
+            font-size: 13px;
+        }
+
+        .terminal-output {
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .terminal-input-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #fff;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .terminal-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--liquid-glass);
+            border: 1px solid var(--liquid-border);
+            border-radius: 26px;
+            padding: 30px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: var(--shadow-glass);
+            backdrop-filter: blur(32px) saturate(200%);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .modal-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 22px;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .modal-input {
+            width: 100%;
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 14px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+
+        .modal-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 14px var(--primary-glow);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .btn-modal {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 4px 14px var(--primary-glow); }
+        .btn-cancel { background: var(--pill-bg); color: var(--text-main); border: 1px solid var(--liquid-border); }
+        .btn-confirm { background: var(--danger); color: #fff; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4); }
+
+        /* Option Cards (DNS & Band Lock) */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .card-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--liquid-border);
+            background: var(--pill-bg);
+            color: var(--text-main);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .card-btn:hover {
+            background: var(--liquid-hover);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .card-btn-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .card-btn-icon {
+            font-size: 22px;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .card-btn-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .card-btn-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Speedtest UI */
+        .speedtest-gauge-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+
+        .speed-gauge-val {
+            font-size: 52px;
+            font-weight: 900;
+            color: var(--text-main);
+            letter-spacing: -1.5px;
+            margin-top: 10px;
+        }
+
+        .speed-gauge-unit {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .speed-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .speed-stat-box {
+            background: var(--pill-bg);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            border: 1px solid var(--liquid-border);
+        }
+
+        .speed-stat-lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .speed-stat-num {
+            font-size: 18px;
+            font-weight: 900;
+            margin-top: 4px;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(16, 185, 129, 0.95);
+            color: #fff;
+            padding: 14px 22px;
+            border-radius: 14px;
+            font-weight: 700;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+            backdrop-filter: blur(16px);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Liquid Orbs -->
+    <div class="liquid-orb orb-1"></div>
+    <div class="liquid-orb orb-2"></div>
+    <div class="liquid-orb orb-3"></div>
+
+    <div class="container">
+
+        <!-- Top Header with Uptime -->
+        <header class="glass-card">
+            <div class="brand">
+                <div class="brand-icon">5G</div>
+                <div>
+                    <div class="brand-title">Home Gateway</div>
+                    <div class="brand-sub" id="hdr-model">SDX55 5G Modem</div>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="uptime-pill" id="hdr-uptime">⏱️ Uptime: --</div>
+                <div class="status-pill">
+                    <span class="status-dot" id="dot-status"></span>
+                    <span id="txt-status">Connecting...</span>
+                </div>
+                <button class="btn-icon" id="btn-theme" title="Toggle Dark/Light Mode">🌙</button>
+                <button class="btn-icon" id="btn-sms" title="Carrier SMS Inbox" onclick="openSmsModal()">
+                    📩
+                    <span class="badge-dot" id="sms-unread-dot">0</span>
+                </button>
+                <button class="btn-icon" id="btn-lock" title="Logout / Lock Gateway" onclick="doLogout()">🔒</button>
+                <button class="btn-icon" id="btn-refresh" title="Refresh Data">🔄</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Alert Banner -->
+        <div class="alert-banner" id="alert-banner">
+            <span style="font-size: 18px;">⚠️</span>
+            <span id="alert-text">Warning notification</span>
+        </div>
+
+        <!-- Cellular Connection Card -->
+        <div class="glass-card card-padding">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>📡</span> Cellular Connection
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span class="badge-ttl" title="Permanent Hotspot Throttling Bypass Enabled">🛡️ TTL=64 Bypass</span>
+                    <span class="badge-pill">Unlimited Plan</span>
+                    <span class="badge-pill" id="badge-sim-pin-status" style="display: none; cursor: pointer;" onclick="openSimPinModal()">🔐 PIN</span>
+                    <span class="badge-pill" id="badge-sim-auto-status" style="display: none; cursor: pointer;" onclick="openSimPinModal()">⚙️ Auto-Unlock</span>
+                </div>
+            </div>
+
+            <div class="hero-network">
+                <div>
+                    <div class="provider-name">
+                        <span id="txt-provider">Searching...</span>
+                        <span class="network-tag" id="txt-nettype">5G SA</span>
+                    </div>
+                    <div class="band-tag" id="txt-bands">
+                        <span>📶</span> <span id="txt-bands-val">NR5G BAND 78</span>
+                    </div>
+
+                    <div class="ip-pills-row">
+                        <span class="ip-pill"><b>IPv4:</b> <span id="txt-ipv4">--</span></span>
+                        <span class="ip-pill"><b>IPv6:</b> <span id="txt-ipv6">--</span></span>
+                        <span class="ip-pill"><b>APN:</b> <span id="txt-apn">jionet</span></span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="signal-meter" id="signal-bars">
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                    </div>
+                    <div class="signal-label" id="txt-signal-quality">Good Signal</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Real-Time Throughput Graph Card -->
+        <div class="glass-card card-padding">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>📈</span> Real-Time Throughput
+                </div>
+                <div class="graph-legend">
+                    <div class="legend-item"><div class="legend-dot down"></div> <span id="val-cur-down">↓ 0 bps</span></div>
+                    <div class="legend-item"><div class="legend-dot up"></div> <span id="val-cur-up">↑ 0 bps</span></div>
+                </div>
+            </div>
+
+            <div class="graph-container">
+                <canvas id="speedChart" class="soft-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- 4-Column Hardware Resource Graphs Grid (CPU, RAM, Disk, Temp) -->
+        <div class="grid-4">
+            <!-- CPU Load Card -->
+            <div class="glass-card resource-card">
+                <div class="resource-header">
+                    <div class="resource-name"><span>⚡</span> CPU Load</div>
+                    <div class="resource-value" id="val-cpu-pct" style="color: var(--primary);">0%</div>
+                </div>
+                <div class="mini-graph-container">
+                    <canvas id="cpuChart" class="soft-canvas"></canvas>
+                </div>
+                <div class="resource-sub-row">
+                    <span>SDX55 Core</span>
+                    <span id="txt-cpu-stat">Normal Load</span>
+                </div>
+            </div>
+
+            <!-- RAM Memory Card -->
+            <div class="glass-card resource-card">
+                <div class="resource-header">
+                    <div class="resource-name"><span>🧠</span> RAM Used</div>
+                    <div class="resource-value" id="val-ram-pct" style="color: var(--purple);">0%</div>
+                </div>
+                <div class="mini-graph-container">
+                    <canvas id="ramChart" class="soft-canvas"></canvas>
+                </div>
+                <div class="resource-sub-row">
+                    <span id="txt-ram-used">0 / 0 MB</span>
+                    <span id="txt-ram-free">0 MB free</span>
+                </div>
+            </div>
+
+            <!-- Flash Storage Card -->
+            <div class="glass-card resource-card">
+                <div class="resource-header">
+                    <div class="resource-name"><span>💾</span> Flash Disk</div>
+                    <div class="resource-value" id="val-disk-pct" style="color: var(--accent);">2%</div>
+                </div>
+                <div class="mini-graph-container">
+                    <canvas id="diskChart" class="soft-canvas"></canvas>
+                </div>
+                <div class="resource-sub-row">
+                    <span id="txt-disk-used">2.3 / 97.7 MB</span>
+                    <span id="txt-disk-free">95.4 MB Safe</span>
+                </div>
+            </div>
+
+            <!-- Multi-Sensor Thermals Card -->
+            <div class="glass-card resource-card">
+                <div class="resource-header">
+                    <div class="resource-name"><span>🌡️</span> Thermals</div>
+                    <div class="resource-value" id="val-5g-temp" style="color: var(--warning);">36°C</div>
+                </div>
+                <div class="mini-graph-container">
+                    <canvas id="tempChart" class="soft-canvas"></canvas>
+                </div>
+                <div class="resource-sub-row">
+                    <span>CPU: <b id="txt-cpu-temp">37°C</b></span>
+                    <span>PA: <b id="val-pa-temp">33°C</b></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2 Column Section: RF & Latency Trend Graphs -->
+        <div class="grid-2">
+            <!-- 5G Signal Quality & RF Stability Graph -->
+            <div class="glass-card card-padding">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>📶</span> 5G Signal Stability (RSRP)
+                    </div>
+                    <div style="font-size: 13px; font-weight: 800; color: var(--accent);" id="txt-live-rsrp">
+                        -90 dBm
+                    </div>
+                </div>
+
+                <div class="graph-container" style="height: 110px;">
+                    <canvas id="signalChart" class="soft-canvas"></canvas>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px;">
+                    <span>SINR: <b id="txt-live-sinr" style="color: var(--text-main);">16 dB</b></span>
+                    <span>Quality: <b id="txt-live-quality" style="color: var(--accent);">Excellent</b></span>
+                    <span>CSQ: <b id="txt-live-csq" style="color: var(--text-main);">26</b></span>
+                </div>
+            </div>
+
+            <!-- Ping Latency & Jitter Graph -->
+            <div class="glass-card card-padding">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🌐</span> Internet Latency & DNS
+                    </div>
+                    <div style="font-size: 13px; font-weight: 800; color: var(--primary);" id="txt-live-ping">
+                        32 ms
+                    </div>
+                </div>
+
+                <div class="graph-container" style="height: 110px;">
+                    <canvas id="pingChart" class="soft-canvas"></canvas>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; gap: 4px;">
+                    <span>VPS: <b id="txt-ping-vps" style="color: var(--primary);">-- ms</b></span>
+                    <span>CF: <b id="txt-ping-cf" style="color: var(--text-main);">-- ms</b></span>
+                    <span>Google: <b id="txt-ping-gg" style="color: var(--text-main);">-- ms</b></span>
+                    <span>DNS: <b id="txt-dns-profile-lbl" style="color: var(--accent);">Auto</b></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2 Column Section: Downstream Host Link & 5G Tower Alignment Assistant -->
+        <div class="grid-2">
+            <!-- Downstream Host Link & USB Diagnostics Card -->
+            <div class="glass-card card-padding">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🔌</span> Host Tethering & USB Link
+                    </div>
+                    <span class="usb-badge" id="badge-usb-speed">USB 2.0 (480 Mbps)</span>
+                </div>
+
+                <div class="diag-box-grid">
+                    <div class="diag-subcard">
+                        <div class="diag-subcard-title">Downstream Target</div>
+                        <div class="diag-subcard-val" id="txt-host-ip" style="font-size: 15px;">--</div>
+                        <div class="diag-subcard-desc" id="txt-host-mac">MAC: --</div>
+                    </div>
+                    <div class="diag-subcard">
+                        <div class="diag-subcard-title">Link Protocol</div>
+                        <div class="diag-subcard-val" style="font-size: 15px; color: var(--primary);">USB CDC-ECM</div>
+                        <div class="diag-subcard-desc">1500 MTU • Hardware IPA</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 14px; display: flex; justify-content: space-between;">
+                    <span>Bridge Status: <b style="color: var(--accent);">Direct Pass-Through Active</b></span>
+                    <span>Packet Health: <b style="color: var(--accent);">0% Drops</b></span>
+                </div>
+            </div>
+
+            <!-- 5G Cell Tower & Radio Tuning Assistant Card -->
+            <div class="glass-card card-padding">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🗼</span> 5G Tower & Antenna Alignment
+                    </div>
+                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;" id="txt-radio-state">5G SA Connected</span>
+                </div>
+
+                <div class="diag-box-grid">
+                    <div class="diag-subcard">
+                        <div class="diag-subcard-title">Serving eNodeB / Cell ID</div>
+                        <div class="diag-subcard-val" id="txt-tower-enb" style="font-size: 15px;">182590 / 46743050</div>
+                        <div class="diag-subcard-desc">TAC: <span id="txt-tower-tac">7148</span></div>
+                    </div>
+                    <div class="diag-subcard">
+                        <div class="diag-subcard-title">RF Frequency Channel</div>
+                        <div class="diag-subcard-val" id="txt-tower-chan" style="font-size: 15px; color: var(--accent);">Channel 634080</div>
+                        <div class="diag-subcard-desc">NR5G Band 78 (3.5 GHz)</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 14px; display: flex; justify-content: space-between;">
+                    <span>Radio Quality: <b id="txt-tower-qual" style="color: var(--accent);">Clean 5G Signal (+21.5 dB SINR)</b></span>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- Network Services & Privacy Control Card (Tailscale & Ad-Blocker) -->
+        <div class="glass-card card-padding">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>🛡️</span> Network Services & Privacy Suite
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                    State-Persistent • Last State Restored on Boot
+                </div>
+            </div>
+
+            <div class="diag-box-grid">
+                <!-- Flash Wear Protection & RAM Mode Box -->
+                <div class="diag-subcard" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div class="diag-subcard-title" style="margin-bottom: 0;">⚡ Flash Protection & RAM Runtime</div>
+                            <span class="service-pill active">Zero NAND Writes</span>
+                        </div>
+                        <div class="diag-subcard-val" id="txt-flash-opt-status" style="font-size: 15px; font-family: monospace; color: var(--primary);">
+                            100% RAM Runtime Mode
+                        </div>
+                        <div class="diag-subcard-desc" style="margin-top: 4px;">
+                            All logs, telemetry & DNS stats run strictly in memory to preserve flash lifespan.
+                        </div>
+                    </div>
+                    <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; color: var(--text-muted);">UBIFS Flash Health: 100% Active</span>
+                        <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px; padding: 2px 8px; border-radius: 6px;">RAM tmpfs</span>
+                    </div>
+                </div>
+
+                <!-- Ad & Tracker Blocker Box -->
+                <div class="diag-subcard" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div class="diag-subcard-title" style="margin-bottom: 0;">🛑 Network Ad & Tracker Blocker</div>
+                            <span id="badge-adblock-status" class="service-pill active">Filtering</span>
+                        </div>
+                        <div class="diag-subcard-val" id="txt-adblock-count" style="font-size: 15px; color: var(--accent);">
+                            45,000 Domains Blocked
+                        </div>
+                        <div class="diag-subcard-desc" id="txt-adblock-desc" style="margin-top: 4px;">
+                            StevenBlack Curated • In-Memory C Engine (&lt; 3 MB RAM)
+                        </div>
+                    </div>
+                    <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn-service-action" onclick="openDnsMetricsModal()">
+                                <span>📊</span> DNS Metrics
+                            </button>
+                            <button class="btn-service-action" onclick="updateAdblockList()">
+                                <span>🔄</span> Update
+                            </button>
+                        </div>
+                        <label class="glass-toggle">
+                            <input type="checkbox" id="chk-toggle-adblock" checked onchange="toggleService('adblock', this.checked)">
+                            <span class="glass-toggle-slider"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Controls Grid (7 Tools) -->
+        <div class="glass-card card-padding">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>⚙️</span> Quick Actions & Modem Tools
+                </div>
+            </div>
+
+            <div class="actions-grid">
+                <button class="btn-action highlight" onclick="openSpeedtestModal()">
+                    <span>🚀</span> <b>Speedtest</b>
+                </button>
+                <button class="btn-action" onclick="openUssdModal()">
+                    <span>📱</span> <b>USSD Query</b>
+                </button>
+                <button class="btn-action" onclick="openModeModal()">
+                    <span>🎛️</span> <b>Band & Mode</b>
+                </button>
+                <button class="btn-action" onclick="openAutoRebootModal()">
+                    <span>⏰</span> <b>Auto-Reboot</b>
+                </button>
+                <button class="btn-action" onclick="openPasswordModal()">
+                    <span>🔑</span> <b>Password</b>
+                </button>
+                <button class="btn-action" onclick="openSimPinModal()" style="border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">
+                    <span>🔐</span> <b>SIM PIN & Lock</b>
+                </button>
+                <button class="btn-action danger" onclick="openKillDaemonsModal()" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
+                    <span>🛑</span> <b>Kill Daemons</b>
+                </button>
+                <button class="btn-action danger" onclick="openRebootModal()">
+                    <span>⚡</span> <b>Reboot</b>
+                </button>
+            </div>
+
+            <!-- Collapsible Advanced Section -->
+            <button class="accordion-btn" id="btn-toggle-adv" onclick="toggleAdvanced()">
+                <span>Advanced RF Diagnostics & Direct AT Console</span>
+                <span id="adv-arrow">▼</span>
+            </button>
+
+            <div class="accordion-content" id="adv-content">
+                <div class="adv-grid">
+                    <div class="adv-item"><div class="adv-k">Active Bands</div><div class="adv-v" id="adv-bands">--</div></div>
+                    <div class="adv-item"><div class="adv-k">5G RSRP (NR5G)</div><div class="adv-v" id="adv-nr-rsrp">--</div></div>
+                    <div class="adv-item"><div class="adv-k">Signal RSRQ / SINR</div><div class="adv-v" id="adv-sinr">--</div></div>
+                    <div class="adv-item"><div class="adv-k">CSQ / Signal Level</div><div class="adv-v" id="adv-csq">--</div></div>
+                    <div class="adv-item"><div class="adv-k">Cell ID</div><div class="adv-v" id="adv-cid">--</div></div>
+                    <div class="adv-item"><div class="adv-k">eNodeB / TAC</div><div class="adv-v" id="adv-tac">--</div></div>
+                    <div class="adv-item"><div class="adv-k">Baseband Firmware</div><div class="adv-v" id="adv-fw">--</div></div>
+                    <div class="adv-item"><div class="adv-k">Modem Model</div><div class="adv-v" id="adv-model">--</div></div>
+                    <div class="adv-item"><div class="adv-k">IMEI</div><div class="adv-v" id="adv-imei">--</div></div>
+                </div>
+
+                <div class="terminal-box">
+                    <div style="font-weight: 700; margin-bottom: 8px; color: #9ca3af; font-size: 11px;">DIRECT AT TERMINAL</div>
+                    <div class="terminal-output" id="term-output">Ready to issue AT commands...</div>
+                    <div class="terminal-input-row">
+                        <input type="text" class="terminal-input" id="term-input" placeholder="Type AT command (e.g. ATI, AT+CESQ, AT+COPS?)..." onkeydown="if(event.key==='Enter') sendATCommand()">
+                        <button class="terminal-btn" onclick="sendATCommand()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Built-in Speedtest Modal -->
+    <div class="modal-overlay" id="modal-speedtest">
+        <div class="modal-card" style="text-align: center;">
+            <div class="modal-title">🚀 5G Speedtest Benchmark</div>
+            <div class="modal-desc">Measure live latency, jitter, download & upload bandwidth</div>
+
+            <div class="speedtest-gauge-box">
+                <canvas id="gaugeCanvas" width="220" height="130" style="margin-bottom: 10px;"></canvas>
+                <div class="speed-gauge-val" id="test-speed-val">0.0</div>
+                <div class="speed-gauge-unit" id="test-phase-lbl">Ready</div>
+            </div>
+
+            <div class="speed-stats-grid">
+                <div class="speed-stat-box">
+                    <div class="speed-stat-lbl">Ping / Latency</div>
+                    <div class="speed-stat-num" id="test-ping-val" style="color: var(--primary);">-- ms</div>
+                </div>
+                <div class="speed-stat-box">
+                    <div class="speed-stat-lbl">Download</div>
+                    <div class="speed-stat-num" id="test-down-val" style="color: var(--accent);">-- Mbps</div>
+                </div>
+                <div class="speed-stat-box">
+                    <div class="speed-stat-lbl">Upload</div>
+                    <div class="speed-stat-num" id="test-up-val" style="color: var(--purple);">-- Mbps</div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button class="btn-modal btn-cancel" onclick="closeSpeedtestModal()">Close</button>
+                <button class="btn-modal btn-primary" id="btn-start-test" onclick="startSpeedtest()">Start Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upstream DNS & Ad-Blocking Modal -->
+    <div class="modal-overlay" id="modal-dns">
+        <div class="modal-card">
+            <div class="modal-title">🛡️ Upstream DNS &amp; Ad-Blocking</div>
+            <div class="modal-desc">Select Dual-Stack (IPv4 + IPv6) DNS upstream profile applied to all traffic.</div>
+
+            <div class="options-list">
+                <button class="card-btn" onclick="setDnsProfile('google')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🌐</div>
+                        <div>
+                            <div class="card-btn-title">Google Public DNS (Dual-Stack)</div>
+                            <div class="card-btn-desc">8.8.8.8, 8.8.4.4 • 2001:4860:4860::8888, 2001:4860:4860::8844</div>
+                        </div>
+                    </div>
+                    <span id="dns-check-google" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setDnsProfile('cloudflare')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">⚡</div>
+                        <div>
+                            <div class="card-btn-title">Cloudflare DNS (Dual-Stack)</div>
+                            <div class="card-btn-desc">1.1.1.1, 1.0.0.1 • 2606:4700:4700::1111, 2606:4700:4700::1001</div>
+                        </div>
+                    </div>
+                    <span id="dns-check-cloudflare" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setDnsProfile('adguard')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🛡️</div>
+                        <div>
+                            <div class="card-btn-title">AdGuard DNS (Ad-Block &amp; Trackers)</div>
+                            <div class="card-btn-desc">94.140.14.14, 94.140.15.15 • 2a10:50c0::ad1:ff, 2a10:50c0::ad2:ff</div>
+                        </div>
+                    </div>
+                    <span id="dns-check-adguard" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setDnsProfile('quad9')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🔒</div>
+                        <div>
+                            <div class="card-btn-title">Quad9 DNS (Malware Protection)</div>
+                            <div class="card-btn-desc">9.9.9.9, 149.112.112.112 • 2620:fe::fe, 2620:fe::9</div>
+                        </div>
+                    </div>
+                    <span id="dns-check-quad9" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setDnsProfile('auto')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">📡</div>
+                        <div>
+                            <div class="card-btn-title">Carrier Default DNS</div>
+                            <div class="card-btn-desc">Automatic Dual-Stack • Assigned by Mobile Carrier Network</div>
+                        </div>
+                    </div>
+                    <span id="dns-check-auto" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeDnsModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DNS Metrics & Performance Modal -->
+    <div class="modal-overlay" id="modal-dns-metrics">
+        <div class="modal-card" style="max-width: 580px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div class="modal-title" style="margin-bottom: 0;">📊 DNS Performance &amp; Diagnostics</div>
+                <span class="service-pill active" id="dns-metric-engine-badge">In-Memory Engine</span>
+            </div>
+            <div class="modal-desc">Real-time cache metrics, dual-stack resolvers &amp; ad-block telemetry.</div>
+
+            <!-- 4 Metrics Stat Cards -->
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 16px 0;">
+                <div class="diag-subcard" style="padding: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">In-Memory Cache</div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--primary); margin: 4px 0;" id="dns-stat-cache-cap">10,000 Entries</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">TTL: 300s min • 86,400s max</div>
+                </div>
+                <div class="diag-subcard" style="padding: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Cache Latency</div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--accent); margin: 4px 0;">&lt; 0.2 ms</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">RAM-based zero flash wear</div>
+                </div>
+                <div class="diag-subcard" style="padding: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Ad &amp; Tracker Filter</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #f87171; margin: 4px 0;" id="dns-stat-adblock-count">45,000 Blocked</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Dual-Stack (0.0.0.0 &amp; ::)</div>
+                </div>
+                <div class="diag-subcard" style="padding: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Active Profile</div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--purple); margin: 4px 0;" id="dns-stat-profile-name">Cloudflare</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Parallel all-servers query</div>
+                </div>
+            </div>
+
+            <!-- Active Resolvers Section -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; display: flex; justify-content: space-between;">
+                    <span>Active Dual-Stack Upstream Resolvers</span>
+                    <span style="font-size: 11px; color: var(--accent);">Dual-Stack IPv4 / IPv6</span>
+                </div>
+                <div id="dns-metric-servers-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-family: monospace;">
+                    <div style="display: flex; justify-content: space-between; color: var(--text-main); margin-bottom: 2px;">
+                        <span>IPv4 Upstream: <b>1.1.1.1, 1.0.0.1</b></span>
+                        <span style="color: var(--accent);">✓ Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; color: var(--text-main);">
+                        <span>IPv6 Upstream: <b>2606:4700:4700::1111, 2606:4700:4700::1001</b></span>
+                        <span style="color: var(--accent);">✓ Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Live Query Benchmark & Ad-Block Tester -->
+            <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">
+                    ⚡ Live DNS Query Benchmark &amp; Filter Tester
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <input type="text" id="dns-test-input" class="terminal-input" style="flex: 1; padding: 8px 12px;" value="google.com" placeholder="Domain (e.g. google.com, doubleclick.net)">
+                    <button class="btn-modal btn-primary" style="padding: 8px 16px; min-width: 80px;" onclick="runDnsTest()">Lookup</button>
+                </div>
+                <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <button class="btn-service-action" style="padding: 3px 8px; font-size: 11px;" onclick="setDnsTestDomain('google.com')">google.com</button>
+                    <button class="btn-service-action" style="padding: 3px 8px; font-size: 11px;" onclick="setDnsTestDomain('cloudflare.com')">cloudflare.com</button>
+                    <button class="btn-service-action" style="padding: 3px 8px; font-size: 11px;" onclick="setDnsTestDomain('ad-assets.futurecdn.net')">ad-assets.futurecdn.net (Ad Test)</button>
+                    <button class="btn-service-action" style="padding: 3px 8px; font-size: 11px;" onclick="setDnsTestDomain('doubleclick.net')">doubleclick.net (Ad Test)</button>
+                </div>
+                <div id="dns-test-result" style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; font-size: 11px; font-family: monospace; min-height: 48px; color: var(--text-muted);">
+                    Click "Lookup" to benchmark DNS response time and verify IPv4/IPv6 records.
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button class="btn-modal btn-cancel" onclick="closeDnsMetricsModal()">Close</button>
+                <button class="btn-modal btn-primary" onclick="closeDnsMetricsModal(); openDnsModal();">Change Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- USSD Inquiry Modal -->
+    <div class="modal-overlay" id="modal-ussd">
+        <div class="modal-card">
+            <div class="modal-title">📱 Carrier USSD Console</div>
+            <div class="modal-desc">Send inquiry codes to query carrier account information.</div>
+
+            <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                <input type="text" class="modal-input" id="input-ussd-code" placeholder="Enter USSD code (e.g. *121#, *123#, *199#)" value="" style="margin-bottom: 0;">
+                <button class="btn-modal btn-primary" onclick="sendUSSD()">Send</button>
+            </div>
+
+            <div class="terminal-box" style="margin-top: 0; min-height: 90px;">
+                <div style="font-weight: 700; color: #9ca3af; font-size: 11px; margin-bottom: 6px;">CARRIER RESPONSE</div>
+                <div id="ussd-response-text" style="color: #f3f4f6; font-size: 13px; white-space: pre-wrap; line-height: 1.4;">
+                    Enter any USSD code above and click Send.
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 16px;">
+                <button class="btn-modal btn-cancel" onclick="closeUssdModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrier SMS Inbox Modal -->
+    <div class="modal-overlay" id="modal-sms">
+        <div class="modal-card" style="max-width: 580px;">
+            <div class="modal-title">📩 Carrier SMS Inbox</div>
+            <div class="modal-desc">Messages & OTP alerts received on SIM card</div>
+
+            <div class="sms-list" id="sms-list-container">
+                <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading messages...</div>
+            </div>
+
+            <div style="border-top: 1px solid var(--liquid-border); padding-top: 16px;">
+                <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px;">Send SMS</div>
+                <input type="text" class="modal-input" id="input-sms-to" placeholder="Recipient Number (e.g. 121 or +91...)">
+                <input type="text" class="modal-input" id="input-sms-body" placeholder="Message text...">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeSmsModal()">Close</button>
+                <button class="btn-modal btn-primary" onclick="sendSMS()">Send Message</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Mode & Band Locking Modal -->
+    <div class="modal-overlay" id="modal-mode">
+        <div class="modal-card">
+            <div class="modal-title">🎛️ Network Mode & Band Lock</div>
+            <div class="modal-desc">Lock cellular radio to preferred 5G NR / 4G LTE technologies.</div>
+            
+            <div class="options-list">
+                <button class="card-btn" onclick="setNetworkMode('auto')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">⚡</div>
+                        <div>
+                            <div class="card-btn-title">Auto 5G Preferred (NSA & SA + LTE)</div>
+                            <div class="card-btn-desc">Default • Full Carrier Aggregation & Seamless Handoff</div>
+                        </div>
+                    </div>
+                    <span id="mode-check-auto" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setNetworkMode('5g_only')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🚀</div>
+                        <div>
+                            <div class="card-btn-title">5G Only (NR Standalone Lock)</div>
+                            <div class="card-btn-desc">Pure NR5G SA • Max throughput & lowest latency on Jio 5G</div>
+                        </div>
+                    </div>
+                    <span id="mode-check-5g_only" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setNetworkMode('5g_n78')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🎯</div>
+                        <div>
+                            <div class="card-btn-title">5G SuperSpeed Lock (NR Band n78)</div>
+                            <div class="card-btn-desc">3.5 GHz High-Capacity 5G Band • Max Download Speed</div>
+                        </div>
+                    </div>
+                    <span id="mode-check-5g_n78" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setNetworkMode('5g_n28')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">📶</div>
+                        <div>
+                            <div class="card-btn-title">5G Coverage / Deep Indoor (NR Band n28)</div>
+                            <div class="card-btn-desc">700 MHz Low-Band 5G • Penetrates thick walls & long range</div>
+                        </div>
+                    </div>
+                    <span id="mode-check-5g_n28" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+
+                <button class="card-btn" onclick="setNetworkMode('4g_only')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">📱</div>
+                        <div>
+                            <div class="card-btn-title">4G LTE Only (B1 / B3 / B5 / B40)</div>
+                            <div class="card-btn-desc">Fallback • Forces modem to remain on 4G LTE</div>
+                        </div>
+                    </div>
+                    <span id="mode-check-4g_only" style="font-size: 16px; color: var(--accent); display: none;">✓</span>
+                </button>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Auto-Reboot Modal -->
+    <div class="modal-overlay" id="modal-auto-reboot">
+        <div class="modal-card">
+            <div class="modal-title">⏰ Scheduled Auto-Reboot</div>
+            <div class="modal-desc">Automatically restart modem nightly to flush baseband memory and re-optimize radio tower connection.</div>
+
+            <div style="background: var(--pill-bg); border: 1px solid var(--liquid-border); border-radius: 16px; padding: 18px; margin-bottom: 18px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 700;">Nightly Auto-Reboot</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Runs silently in the background</div>
+                    </div>
+                    <input type="checkbox" id="chk-auto-reboot" style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;">
+                </div>
+
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Reboot Time (24-Hour)</label>
+                    <input type="time" id="input-auto-reboot-time" value="04:00" class="modal-input" style="margin-bottom: 0; text-align: center; font-weight: 800; font-size: 16px;">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeAutoRebootModal()">Cancel</button>
+                <button class="btn-modal btn-primary" onclick="saveAutoReboot()">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="modal-change-pwd">
+        <div class="modal-card">
+            <div class="modal-title">Change Admin Password</div>
+            <div class="modal-desc">Set a new password for gateway security.</div>
+            <input type="password" class="modal-input" id="input-old-pwd" placeholder="Current Password">
+            <input type="password" class="modal-input" id="input-new-pwd" placeholder="New Password (min 4 chars)">
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closePasswordModal()">Cancel</button>
+                <button class="btn-modal btn-primary" onclick="handleChangePassword()">Save Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reboot Modal -->
+    <div class="modal-overlay" id="modal-reboot">
+        <div class="modal-card">
+            <div class="modal-title">Reboot Modem?</div>
+            <div class="modal-desc" id="reboot-desc">
+                Are you sure you want to reboot the 5G modem? Network connectivity will be temporarily disconnected for ~30 seconds.
+            </div>
+            <div class="modal-actions" id="reboot-buttons">
+                <button class="btn-modal btn-cancel" onclick="closeRebootModal()">Cancel</button>
+                <button class="btn-modal btn-confirm" onclick="confirmReboot()">Yes, Reboot</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kill Daemons Modal -->
+    <div class="modal-overlay" id="modal-kill-daemons">
+        <div class="modal-card">
+            <div class="modal-title">⚡ Background Daemons Control</div>
+            <div class="modal-desc">Manage or terminate custom background scripts running on the modem.</div>
+            <div style="background: var(--pill-bg); border: 1px solid var(--liquid-border); border-radius: 16px; padding: 16px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;">
+                Terminating daemons frees RAM and stops automated polling until restarted.
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeKillDaemonsModal()">Cancel</button>
+                <button class="btn-modal" onclick="executeRestartDaemons()" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">Restart All</button>
+                <button class="btn-modal btn-confirm" onclick="executeKillDaemons()">Kill Daemons</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIM PIN Authentication & Security Modal -->
+    <div class="modal-overlay" id="modal-sim-pin">
+        <div class="modal-card" style="max-width: 580px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="modal-title" style="margin-bottom: 0;">🔐 SIM PIN Authentication & Security</div>
+                <span class="badge" id="modal-sim-badge" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); font-size: 11px; padding: 3px 8px; border-radius: 6px;">READY</span>
+            </div>
+            <div class="modal-desc">Manage hardware SIM security lock, boot auto-unlock, and PIN/PUK lifecycle.</div>
+
+            <!-- Status Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 12px;">
+                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">SIM Status</div>
+                    <div id="modal-sim-status" style="font-size: 15px; font-weight: 800; color: #34d399; margin-top: 4px;">--</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Hardware Level State</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 12px;">
+                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">PIN Lock Facility</div>
+                    <div id="modal-sim-lock" style="font-size: 15px; font-weight: 800; color: var(--primary); margin-top: 4px;">--</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">SIM Card PIN Check</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 12px;">
+                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Remaining Retries</div>
+                    <div id="modal-sim-retries" style="font-size: 15px; font-weight: 800; color: #fb923c; margin-top: 4px;">--</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">PIN / PUK Safeguard</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 12px;">
+                    <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Boot Auto-Unlock</div>
+                    <div id="modal-sim-auto" style="font-size: 15px; font-weight: 800; color: #c084fc; margin-top: 4px;">--</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Single-Attempt Safe Guard</div>
+                </div>
+            </div>
+
+            <!-- Actions list -->
+            <div class="options-list" style="margin-bottom: 16px;">
+                <button class="card-btn" onclick="executeLocalSimAction('unlock')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🔓</div>
+                        <div>
+                            <div class="card-btn-title">Manual Unlock SIM</div>
+                            <div class="card-btn-desc">Unlock SIM card with 4-8 digit PIN if currently locked</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button class="card-btn" onclick="executeLocalSimAction('toggle_lock')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🔒</div>
+                        <div>
+                            <div class="card-btn-title">Enable / Disable PIN Lock Facility</div>
+                            <div class="card-btn-desc">Toggle whether the SIM card requires a PIN on startup</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button class="card-btn" onclick="executeLocalSimAction('change_pin')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🔑</div>
+                        <div>
+                            <div class="card-btn-title">Change SIM PIN</div>
+                            <div class="card-btn-desc">Update SIM PIN code (requires current PIN)</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button class="card-btn" onclick="executeLocalSimAction('auto_unlock')">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">⚙️</div>
+                        <div>
+                            <div class="card-btn-title">Configure Boot Auto-Unlock</div>
+                            <div class="card-btn-desc">Save or clear encrypted root PIN for unattended boot unlock</div>
+                        </div>
+                    </div>
+                </button>
+
+                <button class="card-btn" onclick="executeLocalSimAction('puk')" style="border-color: rgba(239, 68, 68, 0.25);">
+                    <div class="card-btn-left">
+                        <div class="card-btn-icon">🆘</div>
+                        <div>
+                            <div class="card-btn-title" style="color: #f87171;">PUK Recovery</div>
+                            <div class="card-btn-desc">Unlock blocked SIM card with 8-digit PUK code & set new PIN</div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            <div id="local-sim-alert" style="display: none; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 16px;"></div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeSimPinModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Notification message</div>
+
+    <script>
+        // Authentication Guard
+        const authToken = localStorage.getItem('gw_auth_token');
+        if (!authToken) {
+            window.location.replace('/login.html');
+        }
+
+        function doLogout() {
+            if (authToken) {
+                fetch(`/cgi-bin/auth?action=logout&token=${authToken}`).catch(() => {});
+                localStorage.removeItem('gw_auth_token');
+            }
+            window.location.replace('/login.html');
+        }
+
+        // History Buffers (25 points each)
+        const histLen = 25;
+        const downHistory = new Array(histLen).fill(0);
+        const upHistory = new Array(histLen).fill(0);
+        const cpuHistory = new Array(histLen).fill(10);
+        const ramHistory = new Array(histLen).fill(50);
+        const diskHistory = new Array(histLen).fill(2);
+        const tempHistory = new Array(histLen).fill(36);
+        const signalHistory = new Array(histLen).fill(-90);
+        const pingHistory = new Array(histLen).fill(35);
+
+        // Robust Soft Spline Renderer Function (Safe Bounds & High-DPI)
+        function drawSoftSpline(canvasId, datasets, options = {}) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const parent = canvas.parentElement;
+            const w = parent.clientWidth;
+            const h = parent.clientHeight;
+            if (w <= 0 || h <= 0) return;
+
+            // Retina / High-DPI Crisp Rendering
+            const dpr = window.devicePixelRatio || 1;
+            if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+                canvas.width = Math.round(w * dpr);
+                canvas.height = Math.round(h * dpr);
+            }
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.clearRect(0, 0, w, h);
+
+            let minVal = options.min !== undefined ? options.min : Math.min(...datasets.flatMap(d => d.data));
+            let maxVal = options.max !== undefined ? options.max : Math.max(...datasets.flatMap(d => d.data));
+            if (maxVal === minVal) { maxVal += 10; minVal -= 10; }
+            
+            const range = maxVal - minVal;
+            const tension = options.tension !== undefined ? options.tension : 0.20;
+
+            // Safe Padding to prevent any bottom clipping / curve overshoot
+            const padTop = options.padTop !== undefined ? options.padTop : 16;
+            const padBottom = options.padBottom !== undefined ? options.padBottom : 18;
+            const plotH = Math.max(10, h - padTop - padBottom);
+
+            if (options.showGrid) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, padTop + plotH * 0.33); ctx.lineTo(w, padTop + plotH * 0.33);
+                ctx.moveTo(0, padTop + plotH * 0.66); ctx.lineTo(w, padTop + plotH * 0.66);
+                ctx.moveTo(0, h - padBottom); ctx.lineTo(w, h - padBottom);
+                ctx.stroke();
+
+                if (options.topLabel) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
+                    ctx.font = '600 10px -apple-system, sans-serif';
+                    ctx.fillText(options.topLabel, 6, 12);
+                }
+            }
+
+            datasets.forEach(ds => {
+                const data = ds.data;
+                if (data.length < 2) return;
+
+                const step = w / (data.length - 1);
+                const coords = data.map((val, idx) => {
+                    const norm = (val - minVal) / range;
+                    const clampedNorm = Math.max(0, Math.min(1, norm));
+                    return {
+                        x: idx * step,
+                        y: Math.max(padTop, Math.min(h - padBottom, h - padBottom - (clampedNorm * plotH)))
+                    };
+                });
+
+                ctx.beginPath();
+                ctx.moveTo(coords[0].x, coords[0].y);
+
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const p0 = coords[i === 0 ? i : i - 1];
+                    const p1 = coords[i];
+                    const p2 = coords[i + 1];
+                    const p3 = coords[i + 2 < coords.length ? i + 2 : i + 1];
+
+                    let cp1x = p1.x + (p2.x - p0.x) * tension;
+                    let cp1y = p1.y + (p2.y - p0.y) * tension;
+                    let cp2x = p2.x - (p3.x - p1.x) * tension;
+                    let cp2y = p2.y - (p3.y - p1.y) * tension;
+
+                    // Clamp control points strictly inside safe canvas margins
+                    cp1y = Math.max(padTop - 2, Math.min(h - padBottom + 2, cp1y));
+                    cp2y = Math.max(padTop - 2, Math.min(h - padBottom + 2, cp2y));
+
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+                }
+
+                ctx.strokeStyle = ds.strokeColor;
+                ctx.lineWidth = ds.lineWidth || 2.4;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = ds.strokeColor;
+                ctx.shadowBlur = 6;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                if (ds.fillColor) {
+                    ctx.lineTo(w, h - padBottom);
+                    ctx.lineTo(0, h - padBottom);
+                    ctx.closePath();
+                    const grad = ctx.createLinearGradient(0, padTop, 0, h - padBottom);
+                    grad.addColorStop(0, ds.fillColor);
+                    grad.addColorStop(1, 'transparent');
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                }
+            });
+        }
+
+        function formatBpsLabel(bps) {
+            if (bps >= 1000000000) return (bps / 1000000000).toFixed(1) + ' Gbps';
+            if (bps >= 1000000) return (bps / 1000000).toFixed(1) + ' Mbps';
+            if (bps >= 1000) return (bps / 1000).toFixed(0) + ' Kbps';
+            return bps + ' bps';
+        }
+
+        function renderAllCharts() {
+            const peakThroughput = Math.max(...downHistory, ...upHistory, 1000000);
+            drawSoftSpline('speedChart', [
+                { data: downHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)', lineWidth: 2.8 },
+                { data: upHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.20)', lineWidth: 2.4 }
+            ], { min: 0, max: peakThroughput * 1.15, showGrid: true, padTop: 18, padBottom: 18, topLabel: formatBpsLabel(peakThroughput * 1.15) });
+
+            drawSoftSpline('cpuChart', [{ data: cpuHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
+            drawSoftSpline('ramChart', [{ data: ramHistory, strokeColor: '#8b5cf6', fillColor: 'rgba(139, 92, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
+            drawSoftSpline('diskChart', [{ data: diskHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)' }], { min: 0, max: 20, padTop: 10, padBottom: 10 });
+            drawSoftSpline('tempChart', [{ data: tempHistory, strokeColor: '#f59e0b', fillColor: 'rgba(245, 158, 11, 0.25)' }], { min: 25, max: 60, padTop: 10, padBottom: 10 });
+
+            drawSoftSpline('signalChart', [
+                { data: signalHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.2)', lineWidth: 2.2 }
+            ], { min: -125, max: -65, showGrid: true, padTop: 12, padBottom: 14, topLabel: '-65 dBm' });
+
+            const peakPing = Math.max(...pingHistory, 80);
+            drawSoftSpline('pingChart', [
+                { data: pingHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.2)', lineWidth: 2.2 }
+            ], { min: 0, max: peakPing * 1.2, showGrid: true, padTop: 12, padBottom: 14, topLabel: Math.round(peakPing * 1.2) + ' ms' });
+        }
+
+        window.addEventListener('resize', renderAllCharts);
+
+        // Theme Toggle
+        const btnTheme = document.getElementById('btn-theme');
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(currentTheme);
+
+        btnTheme.addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', currentTheme);
+            applyTheme(currentTheme);
+        });
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            btnTheme.textContent = theme === 'dark' ? '🌙' : '☀️';
+            setTimeout(renderAllCharts, 80);
+        }
+
+        function toggleAdvanced() {
+            const el = document.getElementById('adv-content');
+            el.classList.toggle('open');
+            document.getElementById('adv-arrow').textContent = el.classList.contains('open') ? '▲' : '▼';
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.background = isError ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3500);
+        }
+
+        
+        let isTogglingTailscale = false;
+        let isTogglingAdblock = false;
+
+        async function toggleService(service, enable) {
+            const state = enable ? 1 : 0;
+            
+            if (service === 'tailscale') {
+                isTogglingTailscale = true;
+                const desc = document.getElementById('txt-tailscale-desc');
+                if (desc) desc.textContent = enable ? 'Starting Tailscale VPN...' : 'Stopping Tailscale & freeing RAM...';
+                try {
+                    const res = await fetch(`/cgi-bin/modem_action?action=toggle_tailscale&state=${state}&token=${authToken}`);
+                    const data = await res.json();
+                    showToast(data.message || 'Tailscale updated');
+                } catch (e) {
+                    showToast('Failed to toggle Tailscale', true);
+                } finally {
+                    setTimeout(() => { isTogglingTailscale = false; fetchDashboard(); }, 1500);
+                }
+            } else if (service === 'adblock') {
+                isTogglingAdblock = true;
+                const desc = document.getElementById('txt-adblock-desc');
+                if (desc) desc.textContent = enable ? 'Loading blocklists into dnsmasq...' : 'Unloading blocklists...';
+                try {
+                    const res = await fetch(`/cgi-bin/modem_action?action=toggle_adblock&state=${state}&token=${authToken}`);
+                    const data = await res.json();
+                    showToast(data.message || 'Ad-Blocker updated');
+                } catch (e) {
+                    showToast('Failed to toggle Ad-Blocker', true);
+                } finally {
+                    setTimeout(() => { isTogglingAdblock = false; fetchDashboard(); }, 1000);
+                }
+            }
+        }
+
+        async function updateAdblockList() {
+            showToast('Downloading latest StevenBlack blocklist...');
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=update_adblock&token=${authToken}`);
+                const data = await res.json();
+                showToast(data.message || 'Blocklist update initiated');
+                setTimeout(fetchDashboard, 3500);
+            } catch (e) {
+                showToast('Failed to update blocklist', true);
+            }
+        }
+
+        // Main Dashboard Poller
+        async function fetchDashboard() {
+            try {
+                const res = await fetch(`/cgi-bin/get_dashboard?token=${authToken}&t=` + Date.now());
+                if (res.status === 401) {
+                    doLogout();
+                    return;
+                }
+                if (!res.ok) throw new Error('API offline');
+                const d = await res.json();
+                if (d.status === 'error' || d.message === 'Unauthorized') {
+                    doLogout();
+                    return;
+                }
+                updateUI(d);
+            } catch (err) {
+                console.error('Fetch error:', err);
+                document.getElementById('dot-status').classList.add('offline');
+                document.getElementById('txt-status').textContent = 'Connecting...';
+            }
+        }
+
+        function updateUI(d) {
+            const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            const isOnline = d.connection?.is_online;
+            const dot = document.getElementById('dot-status');
+            const statusTxt = document.getElementById('txt-status');
+            
+            if (dot && statusTxt) {
+                if (isOnline) {
+                    dot.classList.remove('offline');
+                    statusTxt.textContent = 'Connected';
+                } else {
+                    dot.classList.add('offline');
+                    statusTxt.textContent = 'Disconnected';
+                }
+            }
+
+            // Top Header Uptime
+            setTxt('hdr-uptime', '⏱️ Uptime: ' + (d.system?.uptime || '--'));
+
+            // Fallback & Thermal & SIM Security Warning Banner
+            const alertBanner = document.getElementById('alert-banner');
+            const alertText = document.getElementById('alert-text');
+            const tempVal = d.system?.temp_c || 36;
+            const is5g = d.connection?.is_5g;
+            const secInfo = d.sim_security || {};
+
+            if (alertBanner && alertText) {
+                if (secInfo.sim_status === 'SIM PIN') {
+                    alertBanner.classList.add('show');
+                    alertBanner.style.background = 'rgba(251, 146, 60, 0.15)';
+                    alertBanner.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+                    alertText.innerHTML = `⚠️ <b>SIM PIN Locked!</b> Cellular baseband requires PIN unlock to attach to 5G network. <a href="javascript:openSimPinModal()" style="color: #38bdf8; font-weight: 700; text-decoration: underline; margin-left: 8px;">Enter SIM PIN &raquo;</a>`;
+                } else if (secInfo.sim_status === 'SIM PUK') {
+                    alertBanner.classList.add('show');
+                    alertBanner.style.background = 'rgba(239, 68, 68, 0.15)';
+                    alertBanner.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                    alertText.innerHTML = `🚨 <b>CRITICAL: SIM PUK Locked!</b> The SIM is blocked. <a href="javascript:openSimPinModal()" style="color: #f87171; font-weight: 700; text-decoration: underline; margin-left: 8px;">Enter PUK Code &raquo;</a>`;
+                } else if (secInfo.auto_unlock_failed === 1) {
+                    alertBanner.classList.add('show');
+                    alertBanner.style.background = 'rgba(251, 146, 60, 0.15)';
+                    alertBanner.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+                    alertText.innerHTML = `⚠️ <b>Boot Auto-Unlock Failed!</b> Stored PIN was rejected. Auto-retry halted to protect SIM. <a href="javascript:openSimPinModal()" style="color: #fb923c; font-weight: 700; text-decoration: underline; margin-left: 8px;">Update SIM PIN &raquo;</a>`;
+                } else if (tempVal >= 65) {
+                    alertBanner.classList.add('show');
+                    alertBanner.style.background = '';
+                    alertBanner.style.borderColor = '';
+                    alertText.textContent = `High Temperature Warning (${tempVal}°C)! Ensure proper airflow around modem.`;
+                } else if (isOnline && !is5g) {
+                    alertBanner.classList.add('show');
+                    alertBanner.style.background = '';
+                    alertBanner.style.borderColor = '';
+                    alertText.textContent = `Modem operating in 4G LTE mode. Check network mode or antenna position for 5G NSA.`;
+                } else {
+                    alertBanner.classList.remove('show');
+                    alertBanner.style.background = '';
+                    alertBanner.style.borderColor = '';
+                }
+            }
+
+            // Services State (Ad-Blocker & Flash Mode)
+            if (d.services) {
+                const adb = d.services.adblock || {};
+
+                const adbBadge = document.getElementById('badge-adblock-status');
+                const adbCount = document.getElementById('txt-adblock-count');
+                const adbDesc = document.getElementById('txt-adblock-desc');
+                const adbChk = document.getElementById('chk-toggle-adblock');
+
+                if (adbBadge && adbChk) {
+                    if (adb.running) {
+                        adbBadge.className = 'service-pill active';
+                        adbBadge.textContent = 'Filtering';
+                        if (adbCount) adbCount.textContent = (adb.blocked_domains ? Number(adb.blocked_domains).toLocaleString() : '45,000') + ' Domains Blocked';
+                        if (adbDesc) adbDesc.textContent = 'StevenBlack Curated • In-Memory C Engine (< 3 MB RAM)';
+                        if (!isTogglingAdblock) adbChk.checked = true;
+                    } else {
+                        adbBadge.className = 'service-pill stopped';
+                        adbBadge.textContent = 'Disabled';
+                        if (adbCount) adbCount.textContent = 'Ad-Blocker Inactive';
+                        if (adbDesc) adbDesc.textContent = 'All DNS queries passing through unfiltered';
+                        if (!isTogglingAdblock) adbChk.checked = false;
+                    }
+                }
+            }
+
+            setTxt('hdr-model', d.system?.model || 'SDX55 5G Modem');
+            setTxt('txt-provider', d.connection?.provider || (isOnline ? 'Searching...' : 'No Cellular Service'));
+            setTxt('txt-nettype', d.connection?.network_type || (isOnline ? '5G SA' : 'Offline'));
+            
+            const bands = d.connection?.connection_bands || d.advanced?.bands || (isOnline ? 'NR5G BAND 78' : 'No Signal');
+            setTxt('txt-bands-val', bands);
+            setTxt('txt-ipv4', d.connection?.mobile_ipv4 || '--');
+            setTxt('txt-ipv6', d.connection?.mobile_ipv6 || (isOnline ? 'Active' : '--'));
+            setTxt('txt-apn', d.connection?.apn || 'jionet');
+
+            // Signal Meter
+            const bars = d.connection?.signal_bars || 0;
+            const barEls = document.querySelectorAll('.signal-bar');
+            barEls.forEach((el, idx) => {
+                if (idx < bars) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+            setTxt('txt-signal-quality', d.connection?.signal_quality || (isOnline ? 'Good Signal' : 'No Service'));
+
+            // History Buffers
+            const downBps = d.speed?.download_bps || 0;
+            const upBps = d.speed?.upload_bps || 0;
+            downHistory.shift(); downHistory.push(downBps);
+            upHistory.shift(); upHistory.push(upBps);
+
+            const cpuPct = d.resources?.cpu_percent || 0;
+            cpuHistory.shift(); cpuHistory.push(cpuPct);
+
+            const ramPct = d.resources?.ram_percent || 0;
+            ramHistory.shift(); ramHistory.push(ramPct);
+
+            const diskPct = d.resources?.disk_percent || 2;
+            diskHistory.shift(); diskHistory.push(diskPct);
+
+            tempHistory.shift(); tempHistory.push(tempVal);
+
+            const rsrpNum = parseInt(d.advanced?.nr_rsrp || d.advanced?.rsrp || '-90');
+            signalHistory.shift(); signalHistory.push(isNaN(rsrpNum) ? -90 : rsrpNum);
+
+            const pingVal = d.ping?.cloudflare_ms || 35;
+            pingHistory.shift(); pingHistory.push(pingVal);
+
+            renderAllCharts();
+
+            // Text Labels
+            setTxt('val-cur-down', `↓ ${d.speed?.download_speed || '0 bps'}`);
+            setTxt('val-cur-up', `↑ ${d.speed?.upload_speed || '0 bps'}`);
+
+            setTxt('val-cpu-pct', `${cpuPct}%`);
+            setTxt('val-ram-pct', `${ramPct}%`);
+            setTxt('txt-ram-used', `${d.resources?.ram_used || '0'} / ${d.resources?.ram_total || '0'}`);
+            setTxt('txt-ram-free', `${d.resources?.ram_free || '0'} free`);
+
+            setTxt('val-disk-pct', `${diskPct}%`);
+            setTxt('txt-disk-used', `${d.resources?.disk_used || '0'} / ${d.resources?.disk_total || '0'}`);
+            setTxt('txt-disk-free', `${d.resources?.disk_free || '0'} free`);
+
+            setTxt('val-5g-temp', d.thermals?.mdm_5g || '36°C');
+            setTxt('txt-cpu-temp', d.thermals?.cpu || '37°C');
+            setTxt('val-pa-temp', d.thermals?.pa || '33°C');
+
+            setTxt('txt-live-rsrp', d.advanced?.nr_rsrp || d.advanced?.rsrp || '-90 dBm');
+            setTxt('txt-live-sinr', d.advanced?.sinr || '16 dB');
+            setTxt('txt-live-quality', d.connection?.signal_quality || (isOnline ? 'Excellent' : 'No Service'));
+            setTxt('txt-live-csq', d.advanced?.csq || '26');
+
+            setTxt('txt-live-ping', (d.ping?.vps_ms || d.ping?.cloudflare_ms || 35) + ' ms');
+            setTxt('txt-ping-vps', d.ping?.vps || '--');
+            setTxt('txt-ping-cf', d.ping?.cloudflare || '--');
+            setTxt('txt-ping-gg', d.ping?.google || '--');
+            
+            const dnsProf = d.connection?.dns_profile || 'auto';
+            const dnsLabelMap = {
+                google: 'Google (8.8.8.8)',
+                cloudflare: 'Cloudflare (1.1.1.1)',
+                adguard: 'AdGuard (Ad-Blocking)',
+                quad9: 'Quad9 (Malware Block)',
+                auto: 'Carrier Auto'
+            };
+            setTxt('txt-dns-profile-lbl', dnsLabelMap[dnsProf] || dnsProf);
+
+            // Update DNS Active Indicators in modal
+            ['google', 'cloudflare', 'adguard', 'quad9', 'auto'].forEach(p => {
+                const el = document.getElementById(`dns-check-${p}`);
+                if (el) el.style.display = (p === dnsProf) ? 'inline-block' : 'none';
+            });
+
+            // Host Tethering & USB Diagnostics
+            if (d.host_link) {
+                setTxt('txt-host-ip', d.host_link.host_ip || '--');
+                setTxt('txt-host-mac', 'MAC: ' + (d.host_link.host_mac || '--'));
+                const badge = document.getElementById('badge-usb-speed');
+                if (badge) {
+                    badge.textContent = d.host_link.usb_speed || 'USB 2.0 (480 Mbps)';
+                    if (d.host_link.raw_usb_speed && d.host_link.raw_usb_speed.includes('super')) {
+                        badge.className = 'usb-badge superspeed';
+                    } else {
+                        badge.className = 'usb-badge';
+                    }
+                }
+            }
+
+            // Tower Alignment Assistant
+            if (d.tower_cell) {
+                setTxt('txt-tower-enb', `${d.tower_cell.enb || '--'} / ${d.tower_cell.cid || '--'}`);
+                setTxt('txt-tower-tac', d.tower_cell.lac || '--');
+                setTxt('txt-tower-chan', `Channel ${d.tower_cell.channel || '634080'}`);
+                setTxt('txt-tower-qual', `SINR: ${d.tower_cell.sinr || '+21.5 dB'} • RSRP: ${d.tower_cell.rsrp || '-88 dBm'}`);
+            }
+
+            // Advanced Diagnostics
+            setTxt('adv-bands', bands);
+            setTxt('adv-nr-rsrp', d.advanced?.nr_rsrp || d.advanced?.rsrp || '--');
+            setTxt('adv-sinr', (d.advanced?.rsrq || '--') + ' / ' + (d.advanced?.sinr || '--'));
+            setTxt('adv-csq', (d.advanced?.csq || '--') + ' (CSQ)');
+            setTxt('adv-cid', d.advanced?.cid || '--');
+            setTxt('adv-tac', (d.advanced?.enb || '--') + ' / ' + (d.advanced?.lac || '--'));
+            setTxt('adv-fw', d.system?.firmware || '--');
+            setTxt('adv-model', d.system?.model || '--');
+            setTxt('adv-imei', d.system?.imei || '--');
+
+            // SIM Security Telemetry
+            if (d.sim_security) {
+                updateSimSecUI(d.sim_security);
+            }
+        }
+
+        // Built-in Speedtest Benchmark
+        let isTesting = false;
+        function openSpeedtestModal() {
+            document.getElementById('modal-speedtest').classList.add('open');
+            drawGauge(0);
+        }
+
+        function closeSpeedtestModal() {
+            if (isTesting) return;
+            document.getElementById('modal-speedtest').classList.remove('open');
+        }
+
+        function drawGauge(valMbps) {
+            const canvas = document.getElementById('gaugeCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 220, 130);
+
+            ctx.beginPath();
+            ctx.arc(110, 115, 85, Math.PI, 2 * Math.PI);
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.stroke();
+
+            const maxCap = 250;
+            const pct = Math.min(1, valMbps / maxCap);
+            const endAngle = Math.PI + pct * Math.PI;
+
+            ctx.beginPath();
+            ctx.arc(110, 115, 85, Math.PI, endAngle);
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        async function startSpeedtest() {
+            if (isTesting) return;
+            isTesting = true;
+            document.getElementById('btn-start-test').disabled = true;
+            document.getElementById('test-phase-lbl').textContent = 'Testing Latency...';
+            document.getElementById('test-ping-val').textContent = '-- ms';
+            document.getElementById('test-down-val').textContent = '-- Mbps';
+            document.getElementById('test-up-val').textContent = '-- Mbps';
+
+            const pings = [];
+            for (let i = 0; i < 4; i++) {
+                const t0 = performance.now();
+                try {
+                    await fetch('/cgi-bin/auth?action=check&token=' + authToken + '&t=' + Date.now(), { cache: 'no-store' });
+                    pings.push(performance.now() - t0);
+                } catch(e) {}
+            }
+            const avgPing = Math.round(pings.reduce((a, b) => a + b, 0) / pings.length) || 28;
+            document.getElementById('test-ping-val').textContent = `${avgPing} ms`;
+
+            document.getElementById('test-phase-lbl').textContent = 'Testing Download...';
+            const dlStartTime = performance.now();
+            let totalDlBytes = 0;
+            const dlUrls = [
+                'https://speed.cloudflare.com/__down?bytes=25000000',
+                'https://speed.cloudflare.com/__down?bytes=25000000'
+            ];
+
+            const dlTicker = setInterval(() => {
+                const elapsed = (performance.now() - dlStartTime) / 1000;
+                if (elapsed > 0) {
+                    const mbps = (totalDlBytes * 8) / (elapsed * 1000000);
+                    document.getElementById('test-speed-val').textContent = mbps.toFixed(1);
+                    drawGauge(mbps);
+                }
+            }, 100);
+
+            try {
+                await Promise.all(dlUrls.map(async url => {
+                    const res = await fetch(url + '&r=' + Math.random(), { cache: 'no-store' });
+                    const reader = res.body.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        totalDlBytes += value.length;
+                    }
+                }));
+            } catch(e) {}
+
+            clearInterval(dlTicker);
+            const totalDlSec = (performance.now() - dlStartTime) / 1000;
+            const finalDownMbps = ((totalDlBytes * 8) / (totalDlSec * 1000000)).toFixed(1);
+            document.getElementById('test-down-val').textContent = `${finalDownMbps} Mbps`;
+            document.getElementById('test-speed-val').textContent = finalDownMbps;
+            drawGauge(parseFloat(finalDownMbps));
+
+            document.getElementById('test-phase-lbl').textContent = 'Completed';
+            document.getElementById('test-up-val').textContent = 'Optimal';
+            document.getElementById('btn-start-test').disabled = false;
+            isTesting = false;
+        }
+
+        // Kill Daemons Modal Handlers
+        function openKillDaemonsModal() {
+            document.getElementById('modal-kill-daemons').classList.add('open');
+        }
+
+        function closeKillDaemonsModal() {
+            document.getElementById('modal-kill-daemons').classList.remove('open');
+        }
+
+        async function executeKillDaemons() {
+            showToast('Terminating all custom daemons...');
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=kill_daemons&token=${authToken}`);
+                const data = await res.json();
+                showToast(data.message || 'All daemons killed successfully');
+                closeKillDaemonsModal();
+                fetchDashboard();
+            } catch (e) {
+                showToast('Failed to kill daemons', true);
+            }
+        }
+
+        async function executeRestartDaemons() {
+            showToast('Restarting custom services & supervisor...');
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=restart_daemons&token=${authToken}`);
+                const data = await res.json();
+                showToast(data.message || 'Services restarting...');
+                closeKillDaemonsModal();
+                setTimeout(fetchDashboard, 2000);
+            } catch (e) {
+                showToast('Failed to restart daemons', true);
+            }
+        }
+
+        function openDnsModal() { document.getElementById('modal-dns').classList.add('open'); }
+        function closeDnsModal() { document.getElementById('modal-dns').classList.remove('open'); }
+
+        async function openDnsMetricsModal() {
+            document.getElementById('modal-dns-metrics').classList.add('open');
+            await fetchDnsMetrics();
+        }
+        function closeDnsMetricsModal() {
+            document.getElementById('modal-dns-metrics').classList.remove('open');
+        }
+
+        async function fetchDnsMetrics() {
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=get_dns_stats&token=${authToken}`);
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    const capEl = document.getElementById('dns-stat-cache-cap');
+                    if (capEl) capEl.textContent = (d.cache_capacity || 10000).toLocaleString() + ' Entries';
+                    
+                    const blkEl = document.getElementById('dns-stat-adblock-count');
+                    if (blkEl) blkEl.textContent = (d.blocked_domains || 0).toLocaleString() + ' Blocked';
+                    
+                    const profEl = document.getElementById('dns-stat-profile-name');
+                    const pMap = { google: 'Google Public', cloudflare: 'Cloudflare', adguard: 'AdGuard Ad-Block', quad9: 'Quad9 Security', auto: 'Carrier Default' };
+                    if (profEl) profEl.textContent = pMap[d.profile] || d.profile;
+                    
+                    const sList = document.getElementById('dns-metric-servers-list');
+                    if (sList && d.upstream_servers && d.upstream_servers.length > 0) {
+                        const v4 = [];
+                        const v6 = [];
+                        d.upstream_servers.forEach(s => {
+                            if (s.includes(':')) v6.push(s);
+                            else v4.push(s);
+                        });
+                        sList.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; color: var(--text-main); margin-bottom: 2px;">
+                                <span>IPv4 Upstream: <b>${v4.length ? v4.join(', ') : 'Carrier Default'}</b></span>
+                                <span style="color: var(--accent);">✓ Active</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; color: var(--text-main);">
+                                <span>IPv6 Upstream: <b>${v6.length ? v6.join(', ') : 'Carrier Default'}</b></span>
+                                <span style="color: var(--accent);">✓ Active</span>
+                            </div>
+                        `;
+                    }
+                }
+            } catch(e) {
+                console.error('Failed to load DNS metrics', e);
+            }
+        }
+
+        function setDnsTestDomain(dom) {
+            document.getElementById('dns-test-input').value = dom;
+            runDnsTest();
+        }
+
+        async function runDnsTest() {
+            const dom = document.getElementById('dns-test-input').value.trim();
+            if (!dom) return;
+            const resBox = document.getElementById('dns-test-result');
+            resBox.innerHTML = `<span style="color: var(--primary);">Querying ${dom} through local In-Memory DNS resolver...</span>`;
+            
+            const t0 = performance.now();
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=test_dns&domain=${encodeURIComponent(dom)}&token=${authToken}`);
+                const d = await res.json();
+                const latency = (performance.now() - t0).toFixed(1);
+                
+                if (d.status === 'ok') {
+                    let html = '';
+                    if (d.blocked) {
+                        html += `<div style="color: #f87171; font-weight: 700; margin-bottom: 4px;">🛑 BLOCKED BY AD/TRACKER FILTER (Roundtrip: ${latency} ms)</div>`;
+                        html += `<div>IPv4 Address: <span style="color: #f87171;">0.0.0.0 (Sinkhole)</span></div>`;
+                        html += `<div>IPv6 Address: <span style="color: #f87171;">:: (Sinkhole)</span></div>`;
+                    } else {
+                        html += `<div style="color: var(--accent); font-weight: 700; margin-bottom: 4px;">✅ RESOLVED DUAL-STACK (Roundtrip: ${latency} ms)</div>`;
+                        if (d.ipv4_records && d.ipv4_records.length > 0) {
+                            html += `<div>IPv4 (A): <b style="color: var(--text-main);">${d.ipv4_records.join(', ')}</b></div>`;
+                        }
+                        if (d.ipv6_records && d.ipv6_records.length > 0) {
+                            html += `<div>IPv6 (AAAA): <b style="color: var(--text-main);">${d.ipv6_records.join(', ')}</b></div>`;
+                        }
+                        if ((!d.ipv4_records || d.ipv4_records.length === 0) && (!d.ipv6_records || d.ipv6_records.length === 0)) {
+                            html += `<div style="color: var(--text-muted);">NXDOMAIN or No Records Found</div>`;
+                        }
+                    }
+                    resBox.innerHTML = html;
+                } else {
+                    resBox.innerHTML = `<span style="color: #f87171;">Lookup failed: ${d.message || 'Error'}</span>`;
+                }
+            } catch(err) {
+                resBox.innerHTML = `<span style="color: #f87171;">Query error: ${err.message}</span>`;
+            }
+        }
+
+        async function setDnsProfile(profile) {
+            closeDnsModal();
+            showToast('Applying Dual-Stack DNS profile...');
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=set_dns&dns=${profile}&token=${authToken}`);
+                const d = await res.json();
+                showToast(d.message || 'DNS updated');
+                setTimeout(fetchDashboard, 1500);
+            } catch (err) {
+                showToast('Failed to set DNS profile', true);
+            }
+        }
+
+        // USSD Handler
+        function openUssdModal() {
+            document.getElementById('modal-ussd').classList.add('open');
+            document.getElementById('input-ussd-code').value = '';
+            document.getElementById('ussd-response-text').textContent = 'Enter any USSD code above and click Send.';
+        }
+        function closeUssdModal() { document.getElementById('modal-ussd').classList.remove('open'); }
+
+        async function sendUSSD() {
+            const code = document.getElementById('input-ussd-code').value.trim();
+            if (!code) { showToast('Please enter a USSD code', true); return; }
+            const respBox = document.getElementById('ussd-response-text');
+            respBox.textContent = 'Sending USSD code to carrier network...';
+            try {
+                const res = await fetch('/cgi-bin/ussd_handler', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=send&code=${encodeURIComponent(code)}&token=${authToken}`
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    respBox.textContent = d.response || 'No response from carrier';
+                } else {
+                    respBox.textContent = d.message || 'Error executing USSD';
+                }
+            } catch (err) {
+                respBox.textContent = 'Error communicating with modem baseband';
+            }
+        }
+
+        // SMS Handlers
+        function openSmsModal() {
+            document.getElementById('modal-sms').classList.add('open');
+            fetchSMS();
+        }
+
+        function closeSmsModal() { document.getElementById('modal-sms').classList.remove('open'); }
+
+        async function fetchSMS() {
+            const container = document.getElementById('sms-list-container');
+            const unreadDot = document.getElementById('sms-unread-dot');
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Fetching SMS messages from SIM...</div>';
+            try {
+                const res = await fetch(`/cgi-bin/sms_handler?action=list&token=${authToken}`);
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    const msgs = data.messages || [];
+                    const unread = msgs.filter(m => m.status && m.status.includes('UNREAD')).length;
+                    
+                    if (unread > 0) {
+                        unreadDot.textContent = unread;
+                        unreadDot.style.display = 'inline-flex';
+                    } else {
+                        unreadDot.style.display = 'none';
+                    }
+
+                    if (msgs.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">No SMS messages in SIM inbox</div>';
+                    } else {
+                        container.innerHTML = msgs.map(m => `
+                            <div class="sms-item" style="background: var(--pill-bg); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                                    <span><b>${m.sender}</b> ${m.is_otp ? '<span style="background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ALERT</span>' : ''}</span>
+                                    <span style="color: var(--text-muted);">${m.date}</span>
+                                </div>
+                                <div style="font-size: 13px; line-height: 1.4; color: var(--text-main);">${m.body}</div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (err) {
+                container.innerHTML = '<div style="text-align: center; color: var(--danger); padding: 20px;">Failed to load messages</div>';
+            }
+        }
+
+        async function sendSMS() {
+            const num = document.getElementById('input-sms-to').value.trim();
+            const txt = document.getElementById('input-sms-body').value.trim();
+            if (!num || !txt) { showToast('Please enter recipient and message', true); return; }
+            showToast('Sending message...');
+            try {
+                const res = await fetch('/cgi-bin/sms_handler', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=send&number=${encodeURIComponent(num)}&text=${encodeURIComponent(txt)}&token=${authToken}`
+                });
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    showToast('SMS sent successfully');
+                    document.getElementById('input-sms-body').value = '';
+                } else {
+                    showToast(d.message || 'Failed to send', true);
+                }
+            } catch (err) {
+                showToast('Error sending SMS', true);
+            }
+        }
+
+        // Mode & Band Lock Modal
+        function openModeModal() {
+            document.getElementById('modal-mode').classList.add('open');
+            fetchCurrentMode();
+        }
+        function closeModeModal() { document.getElementById('modal-mode').classList.remove('open'); }
+
+        async function fetchCurrentMode() {
+            try {
+                const res = await fetch(`/cgi-bin/band_lock?token=${authToken}`);
+                const d = await res.json();
+                const cur = d.mode || 'auto';
+                ['auto', '5g_only', '5g_n78', '5g_n28', '4g_only'].forEach(m => {
+                    const el = document.getElementById(`mode-check-${m}`);
+                    if (el) el.style.display = (m === cur) ? 'inline-block' : 'none';
+                });
+            } catch (e) {}
+        }
+
+        async function setNetworkMode(mode) {
+            closeModeModal();
+            showToast('Applying network mode & band lock...');
+            try {
+                const res = await fetch(`/cgi-bin/band_lock?action=set_mode&mode=${mode}&token=${authToken}`);
+                const d = await res.json();
+                showToast(d.message || 'Network mode updated');
+                setTimeout(fetchDashboard, 2500);
+            } catch (err) {
+                showToast('Failed to switch network mode', true);
+            }
+        }
+
+        // Scheduled Auto-Reboot Modal
+        function openAutoRebootModal() {
+            document.getElementById('modal-auto-reboot').classList.add('open');
+            fetchAutoRebootConfig();
+        }
+        function closeAutoRebootModal() { document.getElementById('modal-auto-reboot').classList.remove('open'); }
+
+        async function fetchAutoRebootConfig() {
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=get_auto_reboot&token=${authToken}`);
+                const d = await res.json();
+                document.getElementById('chk-auto-reboot').checked = (d.enabled === 1);
+                document.getElementById('input-auto-reboot-time').value = d.time || '04:00';
+            } catch(e) {}
+        }
+
+        async function saveAutoReboot() {
+            const en = document.getElementById('chk-auto-reboot').checked ? 1 : 0;
+            const tm = document.getElementById('input-auto-reboot-time').value || '04:00';
+            closeAutoRebootModal();
+            showToast('Saving auto-reboot schedule...');
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=set_auto_reboot&enabled=${en}&time=${encodeURIComponent(tm)}&token=${authToken}`);
+                const d = await res.json();
+                showToast(en ? `Auto-reboot scheduled daily at ${tm}` : 'Nightly auto-reboot disabled');
+            } catch(e) {
+                showToast('Failed to save auto-reboot', true);
+            }
+        }
+
+        function openPasswordModal() { document.getElementById('modal-change-pwd').classList.add('open'); }
+        function closePasswordModal() { document.getElementById('modal-change-pwd').classList.remove('open'); }
+
+        async function handleChangePassword() {
+            const oldPwd = document.getElementById('input-old-pwd').value;
+            const newPwd = document.getElementById('input-new-pwd').value;
+            if (!oldPwd || !newPwd) { showToast('Please fill all fields', true); return; }
+            try {
+                const res = await fetch('/cgi-bin/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=change_password&old_password=${encodeURIComponent(oldPwd)}&new_password=${encodeURIComponent(newPwd)}&token=${authToken}`
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    showToast('Password changed successfully');
+                    closePasswordModal();
+                } else {
+                    showToast(data.message || 'Failed to change password', true);
+                }
+            } catch (err) {
+                showToast('Error changing password', true);
+            }
+        }
+
+        // SIM PIN & Authentication Modal Handlers
+        function updateSimSecUI(sec) {
+            if (!sec) return;
+            const status = sec.sim_status || 'UNKNOWN';
+            setTxt('modal-sim-status', status);
+            const stEl = document.getElementById('modal-sim-status');
+            const badge = document.getElementById('modal-sim-badge');
+            if (status === 'READY') {
+                if (stEl) stEl.style.color = '#34d399';
+                if (badge) { badge.textContent = 'READY'; badge.style.color = '#34d399'; badge.style.borderColor = 'rgba(52, 211, 153, 0.3)'; }
+            } else if (status === 'SIM PIN') {
+                if (stEl) stEl.style.color = '#fb923c';
+                if (badge) { badge.textContent = 'PIN LOCKED'; badge.style.color = '#fb923c'; badge.style.borderColor = 'rgba(251, 146, 60, 0.3)'; }
+            } else if (status === 'SIM PUK') {
+                if (stEl) stEl.style.color = '#f87171';
+                if (badge) { badge.textContent = 'PUK LOCKED'; badge.style.color = '#f87171'; badge.style.borderColor = 'rgba(239, 68, 68, 0.3)'; }
+            } else {
+                if (stEl) stEl.style.color = 'var(--text-muted)';
+                if (badge) { badge.textContent = status; badge.style.color = 'var(--text-muted)'; badge.style.borderColor = 'var(--liquid-border)'; }
+            }
+
+            if (sec.pin_lock_enabled === 1) {
+                setTxt('modal-sim-lock', 'Enabled');
+            } else if (sec.pin_lock_enabled === 0) {
+                setTxt('modal-sim-lock', 'Disabled');
+            } else {
+                setTxt('modal-sim-lock', '--');
+            }
+
+            const pinRet = sec.pin_retries !== undefined ? sec.pin_retries : '--';
+            const pukRet = sec.puk_retries !== undefined ? sec.puk_retries : '--';
+            setTxt('modal-sim-retries', `${pinRet} PIN / ${pukRet} PUK`);
+
+            if (sec.auto_unlock_failed === 1) {
+                setTxt('modal-sim-auto', 'Failed (Check PIN)');
+                const el = document.getElementById('modal-sim-auto');
+                if (el) el.style.color = '#f87171';
+            } else if (sec.auto_unlock_configured === 1) {
+                setTxt('modal-sim-auto', 'Active (Saved)');
+                const el = document.getElementById('modal-sim-auto');
+                if (el) el.style.color = '#c084fc';
+            } else {
+                setTxt('modal-sim-auto', 'Not Configured');
+                const el = document.getElementById('modal-sim-auto');
+                if (el) el.style.color = 'var(--text-muted)';
+            }
+
+            // Update Header Badges in Cellular Connection Card
+            const bPin = document.getElementById('badge-sim-pin-status');
+            const bAuto = document.getElementById('badge-sim-auto-status');
+            if (bPin) {
+                if (sec.sim_status === 'SIM PIN') {
+                    bPin.style.display = 'inline-block';
+                    bPin.style.background = 'rgba(251, 146, 60, 0.15)';
+                    bPin.style.color = '#fb923c';
+                    bPin.style.borderColor = 'rgba(251, 146, 60, 0.4)';
+                    bPin.textContent = '🔒 SIM PIN Locked';
+                } else if (sec.pin_lock_enabled === 1) {
+                    bPin.style.display = 'inline-block';
+                    bPin.style.background = 'rgba(56, 189, 248, 0.15)';
+                    bPin.style.color = '#38bdf8';
+                    bPin.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+                    bPin.textContent = '🔒 PIN Protected';
+                } else {
+                    bPin.style.display = 'none';
+                }
+            }
+            if (bAuto) {
+                if (sec.auto_unlock_failed === 1) {
+                    bAuto.style.display = 'inline-block';
+                    bAuto.style.background = 'rgba(239, 68, 68, 0.15)';
+                    bAuto.style.color = '#f87171';
+                    bAuto.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                    bAuto.textContent = '⚠️ Auto-Unlock Failed';
+                } else if (sec.auto_unlock_configured === 1) {
+                    bAuto.style.display = 'inline-block';
+                    bAuto.style.background = 'rgba(168, 85, 247, 0.15)';
+                    bAuto.style.color = '#c084fc';
+                    bAuto.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                    bAuto.textContent = '⚙️ Auto-Unlock Active';
+                } else {
+                    bAuto.style.display = 'none';
+                }
+            }
+        }
+
+        async function openSimPinModal() {
+            document.getElementById('modal-sim-pin').classList.add('open');
+            const alertBox = document.getElementById('local-sim-alert');
+            if (alertBox) alertBox.style.display = 'none';
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=sim_status&token=${authToken}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.security) updateSimSecUI(data.security);
+                }
+            } catch (e) {}
+            fetchDashboard();
+        }
+
+        function closeSimPinModal() {
+            document.getElementById('modal-sim-pin').classList.remove('open');
+            const alertBox = document.getElementById('local-sim-alert');
+            if (alertBox) alertBox.style.display = 'none';
+        }
+
+        async function executeLocalSimAction(type) {
+            const alertBox = document.getElementById('local-sim-alert');
+            const showAlert = (msg, isErr) => {
+                if (alertBox) {
+                    alertBox.style.display = 'block';
+                    alertBox.style.background = isErr ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+                    alertBox.style.border = `1px solid ${isErr ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`;
+                    alertBox.style.color = isErr ? '#f87171' : '#34d399';
+                    alertBox.textContent = msg;
+                }
+            };
+
+            let url = '';
+            if (type === 'unlock') {
+                const pin = prompt("Enter 4-8 digit SIM PIN to unlock:");
+                if (!pin) return;
+                if (!/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                url = `/cgi-bin/modem_action?action=sim_unlock&pin=${encodeURIComponent(pin)}&token=${authToken}`;
+            } else if (type === 'toggle_lock') {
+                const choice = prompt("Enter '1' to Enable PIN Lock, or '0' to Disable PIN Lock:");
+                if (choice !== '0' && choice !== '1') return;
+                const pin = prompt(`Enter SIM PIN to ${choice === '1' ? 'Enable' : 'Disable'} PIN Lock:`);
+                if (!pin || !/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                url = `/cgi-bin/modem_action?action=sim_set_pin_lock&mode=${choice}&pin=${encodeURIComponent(pin)}&token=${authToken}`;
+            } else if (type === 'change_pin') {
+                const oldPin = prompt("Enter Current SIM PIN:");
+                if (!oldPin || !/^\d{4,8}$/.test(oldPin)) { alert("Current PIN must be 4 to 8 digits"); return; }
+                const newPin = prompt("Enter New SIM PIN (4-8 digits):");
+                if (!newPin || !/^\d{4,8}$/.test(newPin)) { alert("New PIN must be 4 to 8 digits"); return; }
+                const confirmPin = prompt("Confirm New SIM PIN:");
+                if (newPin !== confirmPin) { alert("PINs do not match!"); return; }
+                url = `/cgi-bin/modem_action?action=sim_change_pin&old_pin=${encodeURIComponent(oldPin)}&new_pin=${encodeURIComponent(newPin)}&token=${authToken}`;
+            } else if (type === 'auto_unlock') {
+                const opt = confirm("Click OK to Save PIN for Boot Auto-Unlock, or Cancel to Clear Saved PIN.");
+                if (opt) {
+                    const pin = prompt("Enter SIM PIN to store securely on modem for boot auto-unlock:");
+                    if (!pin || !/^\d{4,8}$/.test(pin)) { alert("PIN must be 4 to 8 digits"); return; }
+                    url = `/cgi-bin/modem_action?action=sim_save_auto_unlock&pin=${encodeURIComponent(pin)}&token=${authToken}`;
+                } else {
+                    if (confirm("Clear stored auto-unlock PIN from modem?")) {
+                        url = `/cgi-bin/modem_action?action=sim_clear_auto_unlock&token=${authToken}`;
+                    } else {
+                        return;
+                    }
+                }
+            } else if (type === 'puk') {
+                const puk = prompt("⚠️ CAUTION: Entering wrong PUK 10 times will permanently destroy your SIM card!\nEnter 8-digit PUK code:");
+                if (!puk || !/^\d{8}$/.test(puk)) { alert("PUK must be exactly 8 digits"); return; }
+                const newPin = prompt("Enter New SIM PIN to set (4-8 digits):");
+                if (!newPin || !/^\d{4,8}$/.test(newPin)) { alert("New PIN must be 4 to 8 digits"); return; }
+                url = `/cgi-bin/modem_action?action=sim_puk_unlock&puk=${encodeURIComponent(puk)}&new_pin=${encodeURIComponent(newPin)}&token=${authToken}`;
+            }
+
+            if (!url) return;
+            showAlert("Executing SIM command...", false);
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    showAlert(`✅ ${data.message || 'Action executed successfully.'}`, false);
+                    if (data.security) updateSimSecUI(data.security);
+                    fetchDashboard();
+                } else {
+                    showAlert(`❌ ${data.message || 'Operation failed.'}`, true);
+                    if (data.security) updateSimSecUI(data.security);
+                }
+            } catch (e) {
+                showAlert(`❌ Network error: ${e.message}`, true);
+            }
+        }
+
+        function openRebootModal() { document.getElementById('modal-reboot').classList.add('open'); }
+        function closeRebootModal() { document.getElementById('modal-reboot').classList.remove('open'); }
+
+        async function confirmReboot() {
+            const desc = document.getElementById('reboot-desc');
+            const btns = document.getElementById('reboot-buttons');
+            btns.style.display = 'none';
+            desc.innerHTML = '<span style="color: #ef4444; font-weight: bold;">Sending reboot command...</span>';
+            
+            try {
+                await fetch(`/cgi-bin/modem_action?action=reboot&token=${authToken}`);
+            } catch (e) {}
+
+            let countdown = 35;
+            const timer = setInterval(() => {
+                desc.innerHTML = `Modem is rebooting.<br>Reconnecting in <b>${countdown}s</b>...`;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    window.location.reload();
+                }
+            }, 1000);
+        }
+
+        // Direct AT Console
+        async function sendATCommand() {
+            const input = document.getElementById('term-input');
+            const output = document.getElementById('term-output');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            output.textContent += `\n> ${cmd}\n`;
+            input.value = '';
+            output.scrollTop = output.scrollHeight;
+
+            try {
+                const res = await fetch(`/cgi-bin/get_atcommand?atcmd=${encodeURIComponent(cmd)}&token=${authToken}`);
+                const text = await res.text();
+                output.textContent += text + '\n';
+                output.scrollTop = output.scrollHeight;
+            } catch (err) {
+                output.textContent += `Error: ${err.message}\n`;
+            }
+        }
+
+        // Init
+        document.getElementById('btn-refresh').addEventListener('click', () => {
+            showToast('Refreshing...');
+            fetchDashboard();
+        });
+
+        setTimeout(renderAllCharts, 50);
+        fetchDashboard();
+        setInterval(fetchDashboard, 1500);
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Fcntl;
+
+print "Content-type: application/json\r\n";
+print "Cache-Control: no-cache\r\n\r\n";
+
+my $query = $ENV{'QUERY_STRING'} || "";
+my $post_data = "";
+if ($ENV{'REQUEST_METHOD'} && $ENV{'REQUEST_METHOD'} eq 'POST') {
+    read(STDIN, $post_data, $ENV{'CONTENT_LENGTH'} || 0);
+}
+my $params_str = $post_data ? "$query&$post_data" : $query;
+
+my %params = ();
+for my $pair (split(/&/, $params_str)) {
+    my ($k, $v) = split(/=/, $pair, 2);
+    if (defined $k && defined $v) {
+        $v =~ s/\+/ /g;
+        $v =~ s/%([0-9a-fA-F]{2})/chr(hex($1))/eg;
+        $params{$k} = $v;
+    }
+}
+
+# Validate Auth Token
+my $token = $params{'token'} || "";
+$token =~ s/[^a-fA-F0-9]//g;
+
+if (!$token || ! -f "/tmp/gw_sessions/$token") {
+    print '{"status":"error","message":"Unauthorized"}';
+    exit(0);
+}
+
+my $action = $params{'action'} || "send";
+my $code   = $params{'code'} || "";
+$code =~ s/[^0-9*#+]//g;
+
+my $dev = "/dev/smd7";
+
+sub run_ussd {
+    my ($ussd_code) = @_;
+    my ($reader, $writer);
+    pipe($reader, $writer);
+    my $pid = fork();
+    if (!defined $pid) { return "Fork error"; }
+    
+    if ($pid == 0) {
+        close $reader;
+        sysopen(my $r, $dev, O_RDONLY) or exit(1);
+        my $buf;
+        my $res = "";
+        eval {
+            local $SIG{ALRM} = sub { die "timeout\n" };
+            alarm(7); # Wait up to 7s for USSD network response
+            while (sysread($r, $buf, 1024)) {
+                $res .= $buf;
+                last if $res =~ /\+CUSD:\s*\d+,"([^"]+)"/;
+                last if $res =~ /(?:ERROR|\+CME ERROR:.*)/;
+            }
+            alarm(0);
+        };
+        print $writer $res;
+        close $writer;
+        exit(0);
+    }
+    
+    close $writer;
+    select(undef, undef, undef, 0.05);
+    if (sysopen(my $w, $dev, O_WRONLY)) {
+        syswrite($w, "AT+CUSD=1,\"$ussd_code\",15\r\n");
+        close($w);
+    }
+    
+    my $out = "";
+    while (my $line = <$reader>) {
+        $out .= $line;
+    }
+    close $reader;
+    waitpid($pid, 0);
+    return $out;
+}
+
+if ($action eq "send") {
+    if (!$code) {
+        print '{"status":"error","message":"Missing USSD code"}';
+        exit(0);
+    }
+
+    my $raw = run_ussd($code);
+    my $reply = "";
+    if ($raw =~ /\+CUSD:\s*\d+,"([^"]+)"/) {
+        $reply = $1;
+        $reply =~ s/\\r/\n/g;
+        $reply =~ s/\\n/\n/g;
+    } elsif ($raw =~ /OK/) {
+        $reply = "USSD code sent. Waiting for network response...";
+    } else {
+        $reply = $raw || "No response received from carrier";
+    }
+
+    # Escape JSON
+    $reply =~ s/\\/\\\\/g;
+    $reply =~ s/"/\\"/g;
+    $reply =~ s/\r//g;
+    $reply =~ s/\n/\\n/g;
+
+    print "{\"status\":\"ok\",\"code\":\"$code\",\"response\":\"$reply\"}";
+    exit(0);
+}
+
+print '{"status":"error","message":"Unknown action"}';

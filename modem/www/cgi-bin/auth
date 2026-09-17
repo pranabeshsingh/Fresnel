@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Fcntl;
+
+my $auth_conf = "/data/simpleadmin/auth.conf";
+my $session_dir = "/tmp/gw_sessions";
+
+mkdir($session_dir, 0700) if ! -d $session_dir;
+
+# Ensure default auth.conf exists
+if (! -f $auth_conf) {
+    if (open(my $af, ">", $auth_conf)) {
+        print $af "password=admin\n";
+        close($af);
+        chmod(0600, $auth_conf);
+    }
+}
+
+sub get_stored_password {
+    my $pwd = "admin";
+    if (open(my $af, "<", $auth_conf)) {
+        while (my $l = <$af>) {
+            if ($l =~ /^password=(.+)$/) {
+                $pwd = $1;
+                chomp($pwd);
+                last;
+            }
+        }
+        close($af);
+    }
+    return $pwd;
+}
+
+sub save_password {
+    my ($new_pwd) = @_;
+    if (open(my $af, ">", $auth_conf)) {
+        print $af "password=$new_pwd\n";
+        close($af);
+        chmod(0600, $auth_conf);
+        return 1;
+    }
+    return 0;
+}
+
+my $query_str = $ENV{QUERY_STRING} || "";
+my $post_data = "";
+if (($ENV{REQUEST_METHOD} || "") eq "POST") {
+    my $len = $ENV{CONTENT_LENGTH} || 0;
+    read(STDIN, $post_data, $len) if $len > 0;
+}
+
+my $params_str = $post_data ? "$query_str&$post_data" : $query_str;
+$params_str =~ s/;//g;
+
+my %params = ();
+for my $pair (split(/&/, $params_str)) {
+    my ($k, $v) = split(/=/, $pair, 2);
+    next if !defined $k;
+    $v = "" if !defined $v;
+    $v =~ s/\+/ /g;
+    $v =~ s/%([0-9a-fA-F]{2})/chr(hex($1))/eg;
+    $params{$k} = $v;
+}
+
+my $action = $params{action} || "";
+my $password = $params{password} || "";
+my $token = $params{token} || "";
+my $old_pwd = $params{old_password} || "";
+my $new_pwd = $params{new_password} || "";
+
+print "Content-type: application/json\n";
+print "Cache-Control: no-cache\n\n";
+
+if ($action eq "login") {
+    my $stored = get_stored_password();
+    if ($password eq $stored) {
+        my $new_token = sprintf("%08x%08x%08x%08x", int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)));
+        my $tok_file = "$session_dir/$new_token";
+        if (open(my $tf, ">", $tok_file)) {
+            print $tf time() . "\n";
+            close($tf);
+        }
+        print "{\"status\":\"ok\",\"token\":\"$new_token\",\"message\":\"Login successful\"}\n";
+    } else {
+        print "{\"status\":\"error\",\"message\":\"Incorrect password\"}\n";
+    }
+} elsif ($action eq "check") {
+    if ($token && -f "$session_dir/$token") {
+        print "{\"status\":\"ok\",\"authenticated\":true}\n";
+    } else {
+        print "{\"status\":\"error\",\"authenticated\":false,\"message\":\"Session expired or invalid\"}\n";
+    }
+} elsif ($action eq "logout") {
+    if ($token && -f "$session_dir/$token") {
+        unlink("$session_dir/$token");
+    }
+    print "{\"status\":\"ok\",\"message\":\"Logged out\"}\n";
+} elsif ($action eq "change_password") {
+    my $stored = get_stored_password();
+    if (!$token || ! -f "$session_dir/$token") {
+        print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
+    } elsif ($old_pwd ne $stored) {
+        print "{\"status\":\"error\",\"message\":\"Current password is incorrect\"}\n";
+    } elsif (length($new_pwd) < 4) {
+        print "{\"status\":\"error\",\"message\":\"New password must be at least 4 characters\"}\n";
+    } else {
+        if (save_password($new_pwd)) {
+            print "{\"status\":\"ok\",\"message\":\"Password updated successfully\"}\n";
+        } else {
+            print "{\"status\":\"error\",\"message\":\"Failed to save password\"}\n";
+        }
+    }
+} else {
+    print "{\"status\":\"error\",\"message\":\"Invalid action\"}\n";
+}

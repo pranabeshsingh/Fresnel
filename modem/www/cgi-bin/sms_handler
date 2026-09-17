@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Fcntl;
+
+my $dev = "/dev/smd7";
+my $session_dir = "/tmp/gw_sessions";
+
+# Parse parameters
+my $query_str = $ENV{QUERY_STRING} || "";
+my $post_data = "";
+if (($ENV{REQUEST_METHOD} || "") eq "POST") {
+    my $len = $ENV{CONTENT_LENGTH} || 0;
+    read(STDIN, $post_data, $len) if $len > 0;
+}
+
+my $params_str = $post_data ? "$query_str&$post_data" : $query_str;
+$params_str =~ s/;//g;
+
+my %params = ();
+for my $pair (split(/&/, $params_str)) {
+    my ($k, $v) = split(/=/, $pair, 2);
+    next if !defined $k;
+    $v = "" if !defined $v;
+    $v =~ s/\+/ /g;
+    $v =~ s/%([0-9a-fA-F]{2})/chr(hex($1))/eg;
+    $params{$k} = $v;
+}
+
+my $token = $params{token} || "";
+my $action = $params{action} || "list";
+my $sms_id = $params{id} || "";
+my $to_number = $params{number} || "";
+my $sms_text = $params{text} || "";
+
+print "Content-type: application/json\n";
+print "Cache-Control: no-cache\n\n";
+
+# Verify Token
+if (!$token || ! -f "$session_dir/$token") {
+    print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
+    exit(0);
+}
+
+sub run_at {
+    my ($cmd) = @_;
+    $cmd =~ s/\r|\n//g;
+    my ($reader, $writer);
+    pipe($reader, $writer);
+    my $pid = fork();
+    if (!defined $pid) { return ""; }
+    if ($pid == 0) {
+        close $reader;
+        sysopen(my $r, $dev, O_RDONLY) or exit(1);
+        my $buf;
+        my $res = "";
+        eval {
+            local $SIG{ALRM} = sub { die "timeout\n" };
+            alarm(3);
+            while (sysread($r, $buf, 1024)) {
+                $res .= $buf;
+                last if $res =~ /(?:OK|ERROR|\+CMS ERROR:.*|\+CME ERROR:.*)\r?\n/;
+            }
+            alarm(0);
+        };
+        print $writer $res;
+        close $writer;
+        exit(0);
+    }
+    close $writer;
+    select(undef, undef, undef, 0.03);
+    if (sysopen(my $w, $dev, O_WRONLY)) {
+        syswrite($w, "$cmd\r\n");
+        close($w);
+    }
+    my $out = "";
+    while (my $line = <$reader>) {
+        $out .= $line;
+    }
+    close $reader;
+    waitpid($pid, 0);
+    return $out;
+}
+
+if ($action eq "list") {
+    run_at("AT+CMGF=1");
+    run_at("AT+CPMS=\"SM\",\"SM\",\"SM\"");
+    my $raw_sm = run_at("AT+CMGL=\"ALL\"");
+    
+    run_at("AT+CPMS=\"ME\",\"ME\",\"ME\"");
+    my $raw_me = run_at("AT+CMGL=\"ALL\"");
+
+    my @messages = ();
+    for my $raw ($raw_sm, $raw_me) {
+        my @lines = split(/\r?\n/, $raw);
+        for (my $i = 0; $i < scalar(@lines); $i++) {
+            my $line = $lines[$i];
+            if ($line =~ /\+CMGL:\s*(\d+)\s*,\s*"([^"]*)"\s*,\s*"([^"]*)"\s*,\s*(?:"([^"]*)")?\s*,\s*"([^"]*)"/) {
+                my ($idx, $stat, $sender, $alpha, $dt) = ($1, $2, $3, $4, $5);
+                my $body = "";
+                while ($i + 1 < scalar(@lines) && $lines[$i+1] !~ /^\+CMGL:/ && $lines[$i+1] !~ /^(?:OK|ERROR)/) {
+                    $i++;
+                    $body .= ($body ? "\n" : "") . $lines[$i];
+                }
+                
+                my $is_otp = ($body =~ /\b(?:OTP|code|verification|passcode|secret|validity|recharge|balance)\b/i) ? 1 : 0;
+                
+                # Clean JSON strings
+                $sender =~ s/"/\\"/g;
+                $dt =~ s/"/\\"/g;
+                $body =~ s/\\/\\\\/g;
+                $body =~ s/"/\\"/g;
+                $body =~ s/\r//g;
+                $body =~ s/\n/\\n/g;
+
+                push @messages, sprintf('{"id":%d,"status":"%s","sender":"%s","date":"%s","body":"%s","is_otp":%s}',
+                    $idx, $stat, $sender, $dt, $body, $is_otp ? "true" : "false");
+            }
+        }
+    }
+    
+    print "{\"status\":\"ok\",\"messages\":[" . join(",", @messages) . "]}\n";
+
+} elsif ($action eq "delete") {
+    if ($sms_id =~ /^\d+$/) {
+        run_at("AT+CMGF=1");
+        my $res = run_at("AT+CMGD=$sms_id");
+        if ($res =~ /OK/) {
+            print "{\"status\":\"ok\",\"message\":\"Message deleted\"}\n";
+        } else {
+            print "{\"status\":\"error\",\"message\":\"Failed to delete message\"}\n";
+        }
+    } else {
+        print "{\"status\":\"error\",\"message\":\"Invalid SMS ID\"}\n";
+    }
+} elsif ($action eq "send") {
+    if ($to_number && $sms_text) {
+        run_at("AT+CMGF=1");
+        # Send SMS via AT
+        my $res = run_at("AT+CMGS=\"$to_number\"\r$sms_text\x1A");
+        if ($res =~ /OK|\+CMGS:/) {
+            print "{\"status\":\"ok\",\"message\":\"Message sent successfully\"}\n";
+        } else {
+            print "{\"status\":\"error\",\"message\":\"Failed to send SMS\"}\n";
+        }
+    } else {
+        print "{\"status\":\"error\",\"message\":\"Recipient number and message text required\"}\n";
+    }
+} else {
+    print "{\"status\":\"error\",\"message\":\"Unknown action\"}\n";
+}

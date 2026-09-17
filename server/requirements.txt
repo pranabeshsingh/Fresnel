@@ -1,0 +1,3 @@
+# Core server uses standard Python library (http.server, sqlite3, threading)
+# Optional: Required only for Oracle Autonomous Database mode
+oracledb>=2.0.0

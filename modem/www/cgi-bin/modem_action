@@ -1,0 +1,406 @@
+#!/bin/sh
+
+echo "Content-type: application/json"
+echo "Cache-Control: no-cache"
+echo ""
+
+# Parse Query and Post
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    read -r POST_DATA
+    QUERY_STRING="$QUERY_STRING&$POST_DATA"
+fi
+
+get_param() {
+    echo "$QUERY_STRING" | tr '&' '\n' | grep "^$1=" | head -n 1 | cut -d'=' -f2- | sed 's/+/ /g;s/%20/ /g;s/%23/#/g;s/%2A/*/g;s/%3A/:/g;s/%2F/\//g'
+}
+
+ACTION=$(get_param "action")
+TOKEN=$(get_param "token")
+# Strip non-hex
+TOKEN=$(echo "$TOKEN" | tr -cd 'a-fA-F0-9')
+
+if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+    echo '{"status":"error","message":"Unauthorized"}'
+    exit 0
+fi
+
+if [ "$ACTION" = "reboot" ]; then
+    echo '{"status":"ok","message":"Reboot initiated"}'
+    (sleep 1 && /sbin/reboot) &
+    exit 0
+fi
+
+if [ "$ACTION" = "set_dns" ]; then
+    DNS_PROF=$(get_param "dns")
+    mkdir -p /data/simpleadmin
+    echo "$DNS_PROF" > /data/simpleadmin/dns_profile.conf
+    
+    # Strip existing server= and obsolete dns_accel references
+    for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+        [ -f "$conf" ] && sed -i '/^server=/d;/dns_accel/d' "$conf" 2>/dev/null
+    done
+    
+    case "$DNS_PROF" in
+        google)
+            # Google Public DNS (Dual-Stack IPv4 + IPv6)
+            for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+                if [ -f "$conf" ]; then
+                    echo "server=8.8.8.8" >> "$conf"
+                    echo "server=8.8.4.4" >> "$conf"
+                    echo "server=2001:4860:4860::8888" >> "$conf"
+                    echo "server=2001:4860:4860::8844" >> "$conf"
+                fi
+            done
+            cat << 'EOF' > /etc/resolv.conf
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+nameserver 2001:4860:4860::8888
+nameserver 2001:4860:4860::8844
+EOF
+            ;;
+        cloudflare)
+            # Cloudflare DNS (Dual-Stack IPv4 + IPv6)
+            for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+                if [ -f "$conf" ]; then
+                    echo "server=1.1.1.1" >> "$conf"
+                    echo "server=1.0.0.1" >> "$conf"
+                    echo "server=2606:4700:4700::1111" >> "$conf"
+                    echo "server=2606:4700:4700::1001" >> "$conf"
+                fi
+            done
+            cat << 'EOF' > /etc/resolv.conf
+nameserver 1.1.1.1
+nameserver 1.0.0.1
+nameserver 2606:4700:4700::1111
+nameserver 2606:4700:4700::1001
+EOF
+            ;;
+        adguard)
+            # AdGuard Ad-Blocking DNS (Dual-Stack IPv4 + IPv6)
+            for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+                if [ -f "$conf" ]; then
+                    echo "server=94.140.14.14" >> "$conf"
+                    echo "server=94.140.15.15" >> "$conf"
+                    echo "server=2a10:50c0::ad1:ff" >> "$conf"
+                    echo "server=2a10:50c0::ad2:ff" >> "$conf"
+                fi
+            done
+            cat << 'EOF' > /etc/resolv.conf
+nameserver 94.140.14.14
+nameserver 94.140.15.15
+nameserver 2a10:50c0::ad1:ff
+nameserver 2a10:50c0::ad2:ff
+EOF
+            ;;
+        quad9)
+            # Quad9 Malware Protection (Dual-Stack IPv4 + IPv6)
+            for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+                if [ -f "$conf" ]; then
+                    echo "server=9.9.9.9" >> "$conf"
+                    echo "server=149.112.112.112" >> "$conf"
+                    echo "server=2620:fe::fe" >> "$conf"
+                    echo "server=2620:fe::9" >> "$conf"
+                fi
+            done
+            cat << 'EOF' > /etc/resolv.conf
+nameserver 9.9.9.9
+nameserver 149.112.112.112
+nameserver 2620:fe::fe
+nameserver 2620:fe::9
+EOF
+            ;;
+        *)
+            # Auto / Carrier DNS (Dual-Stack)
+            cat << 'EOF' > /etc/resolv.conf
+nameserver 2405:200:800::11
+nameserver 117.96.122.50
+nameserver 117.96.122.150
+EOF
+            ;;
+    esac
+    
+    # Ensure cache and adblock settings remain present
+    for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
+        if [ -f "$conf" ]; then
+            grep -q "cache-size=" "$conf" || echo "cache-size=10000" >> "$conf"
+            grep -q "min-cache-ttl=" "$conf" || echo "min-cache-ttl=300" >> "$conf"
+            grep -q "max-cache-ttl=" "$conf" || echo "max-cache-ttl=86400" >> "$conf"
+            grep -q "neg-ttl=" "$conf" || echo "neg-ttl=60" >> "$conf"
+            grep -q "all-servers" "$conf" || echo "all-servers" >> "$conf"
+            grep -q "adblock_hosts" "$conf" || echo "addn-hosts=/data/simpleadmin/adblock_hosts" >> "$conf"
+        fi
+    done
+    
+    killall -HUP dnsmasq 2>/dev/null || true
+    echo "{\"status\":\"ok\",\"dns\":\"$DNS_PROF\",\"message\":\"Dual-Stack DNS set to $DNS_PROF (IPv4 + IPv6)\"}"
+    exit 0
+fi
+
+if [ "$ACTION" = "get_dns_stats" ]; then
+    DNS_PROF="auto"
+    [ -f /data/simpleadmin/dns_profile.conf ] && DNS_PROF=$(cat /data/simpleadmin/dns_profile.conf 2>/dev/null | tr -d '\r\n')
+    [ -z "$DNS_PROF" ] && DNS_PROF="auto"
+    
+    BLOCKED_COUNT=0
+    [ -f /data/simpleadmin/adblock_hosts ] && BLOCKED_COUNT=$(wc -l < /data/simpleadmin/adblock_hosts 2>/dev/null | tr -d ' ')
+    
+    ADBLOCK_ACTIVE=0
+    [ "$BLOCKED_COUNT" -gt 0 ] && ADBLOCK_ACTIVE=1
+    
+    SERVERS_JSON="[]"
+    if [ -f /etc/resolv.conf ]; then
+        SERVERS_JSON=$(grep '^nameserver' /etc/resolv.conf | awk '{printf "\"%s\",", $2}' | sed 's/,$//')
+        SERVERS_JSON="[$SERVERS_JSON]"
+    fi
+    
+    DNS_PID=$(pidof dnsmasq | awk '{print $1}')
+    [ -z "$DNS_PID" ] && DNS_PID=0
+    
+    cat << EOF
+{
+  "status": "ok",
+  "profile": "$DNS_PROF",
+  "cache_capacity": 10000,
+  "min_ttl_sec": 300,
+  "max_ttl_sec": 86400,
+  "neg_ttl_sec": 60,
+  "blocked_domains": $BLOCKED_COUNT,
+  "adblock_active": $ADBLOCK_ACTIVE,
+  "upstream_servers": $SERVERS_JSON,
+  "dnsmasq_pid": $DNS_PID,
+  "engine": "dnsmasq In-Memory (Zero-Alloc C)"
+}
+EOF
+    exit 0
+fi
+
+if [ "$ACTION" = "test_dns" ]; then
+    TEST_DOMAIN=$(get_param "domain" | tr -cd 'a-zA-Z0-9.-')
+    [ -z "$TEST_DOMAIN" ] && TEST_DOMAIN="google.com"
+    
+    LOOKUP_OUT=$(nslookup "$TEST_DOMAIN" 192.168.225.1 2>&1)
+    
+    V4_ADDRS=$(echo "$LOOKUP_OUT" | grep -E '^Address: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | awk '{print $2}' | grep -v '^192.168.225.1' | awk '{printf "\"%s\",", $1}' | sed 's/,$//')
+    V6_ADDRS=$(echo "$LOOKUP_OUT" | grep -E '^Address: [0-9a-fA-F:]+' | awk '{print $2}' | grep ':' | awk '{printf "\"%s\",", $1}' | sed 's/,$//')
+    
+    IS_BLOCKED=0
+    echo "$LOOKUP_OUT" | grep -qE '^Address:\s*(0\.0\.0\.0|::)[[:space:]]*$' && IS_BLOCKED=1
+    
+    cat << EOF
+{
+  "status": "ok",
+  "domain": "$TEST_DOMAIN",
+  "blocked": $IS_BLOCKED,
+  "ipv4_records": [$V4_ADDRS],
+  "ipv6_records": [$V6_ADDRS]
+}
+EOF
+    exit 0
+fi
+
+if [ "$ACTION" = "toggle_tailscale" ]; then
+    STATE=$(get_param "state" | tr -cd '0-9')
+    mkdir -p /data/simpleadmin
+    STATE_FILE="/data/simpleadmin/services_state.json"
+    
+    if [ "$STATE" = "1" ]; then
+        if [ -f "$STATE_FILE" ]; then
+            sed -i 's/"tailscale_enabled": *[0-9]*/"tailscale_enabled": 1/' "$STATE_FILE" 2>/dev/null || true
+        else
+            echo '{"tailscale_enabled": 1, "adblock_enabled": 1, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        sync
+        setsid /data/tailscale/start_tailscale.sh </dev/null >/dev/null 2>&1 &
+        echo '{"status":"ok","tailscale":1,"message":"Tailscale VPN starting..."}'
+    else
+        if [ -f "$STATE_FILE" ]; then
+            sed -i 's/"tailscale_enabled": *[0-9]*/"tailscale_enabled": 0/' "$STATE_FILE" 2>/dev/null || true
+        else
+            echo '{"tailscale_enabled": 0, "adblock_enabled": 1, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        killall tailscaled 2>/dev/null || true
+        sync
+        echo '{"status":"ok","tailscale":0,"message":"Tailscale stopped (RAM freed)"}'
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "toggle_adblock" ]; then
+    STATE=$(get_param "state" | tr -cd '0-9')
+    mkdir -p /data/simpleadmin
+    STATE_FILE="/data/simpleadmin/services_state.json"
+    
+    if [ "$STATE" = "1" ]; then
+        if [ -f "$STATE_FILE" ]; then
+            sed -i 's/"adblock_enabled": *[0-9]*/"adblock_enabled": 1/' "$STATE_FILE" 2>/dev/null || true
+        else
+            echo '{"tailscale_enabled": 1, "adblock_enabled": 1, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        [ -f /data/simpleadmin/adblock_hosts.active ] && cp /data/simpleadmin/adblock_hosts.active /data/simpleadmin/adblock_hosts
+        killall -SIGHUP dnsmasq 2>/dev/null || true
+        sync
+        echo '{"status":"ok","adblock":1,"message":"Network-wide Ad-Blocking enabled"}'
+    else
+        if [ -f "$STATE_FILE" ]; then
+            sed -i 's/"adblock_enabled": *[0-9]*/"adblock_enabled": 0/' "$STATE_FILE" 2>/dev/null || true
+        else
+            echo '{"tailscale_enabled": 1, "adblock_enabled": 0, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        > /data/simpleadmin/adblock_hosts
+        killall -SIGHUP dnsmasq 2>/dev/null || true
+        sync
+        echo '{"status":"ok","adblock":0,"message":"Ad-Blocker disabled"}'
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "update_adblock" ]; then
+    setsid /usrdata/simpleadmin/scripts/adblock_sync.sh </dev/null >/dev/null 2>&1 &
+    echo '{"status":"ok","message":"Blocklist update initiated in background"}'
+    exit 0
+fi
+
+if [ "$ACTION" = "reset_usage" ]; then
+    rm -f /data/simpleadmin/data_usage.json
+    echo '{"status":"ok","message":"Data usage counters reset"}'
+    exit 0
+fi
+
+if [ "$ACTION" = "get_auto_reboot" ]; then
+    mkdir -p /data/simpleadmin
+    if [ ! -f /data/simpleadmin/auto_reboot.json ]; then
+        echo '{"enabled":0,"time":"04:00","last_date":""}' > /data/simpleadmin/auto_reboot.json
+    fi
+    cat /data/simpleadmin/auto_reboot.json
+    exit 0
+fi
+
+if [ "$ACTION" = "set_auto_reboot" ]; then
+    EN=$(get_param "enabled")
+    TM=$(get_param "time")
+    [ -z "$EN" ] && EN=0
+    [ -z "$TM" ] && TM="04:00"
+    mkdir -p /data/simpleadmin
+    echo "{\"enabled\":$EN,\"time\":\"$TM\",\"last_date\":\"\"}" > /data/simpleadmin/auto_reboot.json
+    sync
+    echo "{\"status\":\"ok\",\"enabled\":$EN,\"time\":\"$TM\",\"message\":\"Nightly auto-reboot updated\"}"
+    exit 0
+fi
+
+
+
+if [ "$ACTION" = "kill_daemons" ]; then
+    # 1. Update persistent state file so supervisor or next boot knows services are off
+    mkdir -p /data/simpleadmin
+    echo '{"tailscale_enabled": 0, "adblock_enabled": 0, "blocked_domains_count": 0}' > /data/simpleadmin/services_state.json
+    
+    # 2. Terminate all custom background services
+    pkill -9 -f 'simpleadmin_daemon.sh' 2>/dev/null || true
+    pkill -9 -f 'tailscaled' 2>/dev/null || true
+    pkill -9 -f 'AdGuardHome' 2>/dev/null || true
+    pkill -9 -f 'iperf3' 2>/dev/null || true
+    pkill -9 -f 'ntpd' 2>/dev/null || true
+    pkill -9 -f 'telegram_bot.pl' 2>/dev/null || true
+    pkill -9 -f 'telegram_notify.sh' 2>/dev/null || true
+    
+    # 3. Clean up adblock DNS
+    > /data/simpleadmin/adblock_hosts
+    killall -SIGHUP dnsmasq 2>/dev/null || true
+    
+    sync
+    echo '{"status":"ok","message":"All custom daemons terminated. System resource load minimized to 0%."}'
+    exit 0
+fi
+
+send_sim_json() {
+    _ST="$1"
+    _RAW="$2"
+    _SEC="$3"
+    _CLEAN=$(echo "$_RAW" | tr -d '\r' | tr '\n' ' ' | sed 's/^[ \t]*//;s/[ \t]*$//;s/\\/\\\\/g;s/"/\\"/g')
+    [ -z "$_SEC" ] && _SEC="{}"
+    echo "{\"status\":\"$_ST\",\"message\":\"$_CLEAN\",\"security\":$_SEC}"
+}
+
+if [ "$ACTION" = "sim_status" ]; then
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    [ -z "$STATUS_JSON" ] && STATUS_JSON="{}"
+    echo "{\"status\":\"ok\",\"security\":$STATUS_JSON}"
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_unlock" ]; then
+    PIN=$(get_param "pin" | tr -cd '0-9')
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --unlock "$PIN" 2>&1)
+    RET=$?
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    if [ $RET -eq 0 ]; then
+        send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    else
+        send_sim_json "error" "$OUT" "$STATUS_JSON"
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_set_pin_lock" ]; then
+    MODE=$(get_param "mode" | tr -cd '0-9')
+    PIN=$(get_param "pin" | tr -cd '0-9')
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --set-lock "$MODE" "$PIN" 2>&1)
+    RET=$?
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    if [ $RET -eq 0 ]; then
+        send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    else
+        send_sim_json "error" "$OUT" "$STATUS_JSON"
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_change_pin" ]; then
+    OLD_PIN=$(get_param "old_pin" | tr -cd '0-9')
+    NEW_PIN=$(get_param "new_pin" | tr -cd '0-9')
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --change-pin "$OLD_PIN" "$NEW_PIN" 2>&1)
+    RET=$?
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    if [ $RET -eq 0 ]; then
+        send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    else
+        send_sim_json "error" "$OUT" "$STATUS_JSON"
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_puk_unlock" ]; then
+    PUK=$(get_param "puk" | tr -cd '0-9')
+    NEW_PIN=$(get_param "new_pin" | tr -cd '0-9')
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --puk-unlock "$PUK" "$NEW_PIN" 2>&1)
+    RET=$?
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    if [ $RET -eq 0 ]; then
+        send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    else
+        send_sim_json "error" "$OUT" "$STATUS_JSON"
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_save_auto_unlock" ]; then
+    PIN=$(get_param "pin" | tr -cd '0-9')
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --save-auto-unlock "$PIN" 2>&1)
+    RET=$?
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    if [ $RET -eq 0 ]; then
+        send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    else
+        send_sim_json "error" "$OUT" "$STATUS_JSON"
+    fi
+    exit 0
+fi
+
+if [ "$ACTION" = "sim_clear_auto_unlock" ]; then
+    OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --clear-auto-unlock 2>&1)
+    STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
+    send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    exit 0
+fi
+
+echo '{"status":"error","message":"Unknown action"}'
