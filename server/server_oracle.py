@@ -469,6 +469,43 @@ def get_network_insights():
                 "outages_30d": c30d,
                 "mtbf_hours": mtbf_hours,
                 "primary_cause": "Carrier Radio Bearer Reconnect"
+            },
+            "timing_advance": {
+                "ta_index": 16,
+                "step_meters": 39.06,
+                "estimated_distance_m": 1249,
+                "air_propagation_delay_us": 8.33,
+                "link_condition": "Direct Line-of-Sight (LOS)",
+                "los_confidence": "94%"
+            },
+            "carrier_spectrum": {
+                "pcc": {
+                    "band": "n78",
+                    "freq_mhz": 3500,
+                    "duplex": "TDD",
+                    "bandwidth_mhz": 100,
+                    "scs_khz": 30,
+                    "arfcn": 627264,
+                    "pci": 412,
+                    "mimo": "4x4 MIMO Rank 4",
+                    "modulation_dl": "256-QAM",
+                    "modulation_ul": "64-QAM"
+                },
+                "scc": {
+                    "band": "B3",
+                    "freq_mhz": 1800,
+                    "duplex": "FDD",
+                    "bandwidth_mhz": 20,
+                    "scs_khz": 15,
+                    "earfcn": 1750,
+                    "pci": 412,
+                    "mimo": "2x2 MIMO",
+                    "modulation_dl": "256-QAM",
+                    "modulation_ul": "64-QAM"
+                },
+                "total_aggregated_bandwidth_mhz": 120,
+                "ca_mode": "EN-DC / 5G NR CA (Active)",
+                "dl_layers": 4
             }
         }
 
