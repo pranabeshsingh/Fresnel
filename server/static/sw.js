@@ -1,5 +1,5 @@
 // Fresnel 5G Cloud Hub Service Worker
-const CACHE_NAME = 'fresnel-v5';
+const CACHE_NAME = 'fresnel-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json'
@@ -22,6 +22,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // Ignore non-http(s) schemes: chrome-extension://, data:, etc.
+  // cache.put() only supports http/https — crashing here also breaks API fetches.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
   // Network first for all API and SSE streams
   if (url.pathname.startsWith('/api/') || url.pathname.includes('stream')) {
     event.respondWith(fetch(event.request));
@@ -34,7 +38,12 @@ self.addEventListener('fetch', (event) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const resClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+          caches.open(CACHE_NAME).then((cache) => {
+            // Extra guard: only cache http/https (belt-and-suspenders)
+            if (event.request.url.startsWith('http')) {
+              cache.put(event.request, resClone).catch(() => {});
+            }
+          });
         }
         return networkResponse;
       }).catch(() => cached);

@@ -9,6 +9,7 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#080c14">
     <meta name="apple-mobile-web-app-capable" content="yes">
+   <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -2933,7 +2934,7 @@
                 setTextIfChanged('kpi-rsrq', rsrq);
                 setTextIfChanged('kpi-csq', csq);
 
-                const activeIp = payload.public_ip || d.public_ip || conn.mobile_ipv6 || conn.mobile_ipv4 || '--';
+                const activeIp = String(payload.public_ip || d.public_ip || conn.mobile_ipv6 || conn.mobile_ipv4 || '--');
                 setTextIfChanged('kpi-public-ip', activeIp);
                 setTextIfChanged('kpi-ip-type', activeIp.includes(':') ? 'IPv6 Egress' : (activeIp !== '--' ? 'IPv4 Egress' : '--'));
 
