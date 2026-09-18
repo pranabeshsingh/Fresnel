@@ -11,22 +11,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        .radar-pulse {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #34d399;
-            box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
-            animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
-        }
-        @keyframes pulse-ring {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 16px rgba(52, 211, 153, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
-        }
         .btn-export-csv {
             background: rgba(56, 189, 248, 0.12);
             color: #38bdf8;
@@ -45,35 +30,6 @@
         .btn-export-csv:hover {
             background: #38bdf8;
             color: #080c14;
-        }
-        #cell-tower-map {
-            height: 210px;
-            width: 100%;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: #080c14;
-            position: relative;
-            overflow: hidden;
-        }
-        #cell-tower-map .leaflet-tile-pane {
-            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
-        }
-        #cell-tower-map .leaflet-popup-content-wrapper,
-        #cell-tower-map .leaflet-popup-tip {
-            background: #0f172a !important;
-            color: #f1f5f9 !important;
-            border: 1px solid rgba(255, 255, 255, 0.15) !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
-            border-radius: 8px !important;
-        }
-        #cell-tower-map .leaflet-popup-content {
-            margin: 8px 12px !important;
-            line-height: 1.4 !important;
-            font-size: 11px !important;
-        }
-        #cell-tower-map .leaflet-container {
-            background: #080c14 !important;
-            font-family: inherit !important;
         }
     </style>
     <script src="/chart.umd.min.js"></script>
@@ -456,42 +412,6 @@
                 <button id="btn-toggle-beeper" onclick="toggleAudioBeeper()" style="background: #34d399; color: #080c14; border: none; font-weight: 700; font-size: 13px; padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s ease;">
                     🔊 Start Audio Beeper
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Station Coordinates Calibration Modal -->
-    <div id="calibration-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
-        <div class="glass-card" style="max-width: 480px; width: 100%; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 10px 40px rgba(0,0,0,0.6); position: relative;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
-                <div style="font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                    <span>📍</span> Station Coordinates &amp; Map Calibration
-                </div>
-                <button onclick="closeStationCalibration()" style="background: transparent; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
-            </div>
-            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
-                3GPP cellular networks broadcast topological IDs (eNB, CID, TAC) rather than exact base station GPS coordinates. Calibrating your receiver station location anchors the map to your actual site for accurate Line-of-Sight vectoring and radio path calculations.
-            </p>
-            <div style="display: flex; gap: 10px; margin-bottom: 16px;">
-                <button class="btn-range" onclick="detectGpsLocation()" style="flex: 1; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8; font-weight: 700; cursor: pointer;">
-                    <span>🛰️</span> Auto-Detect GPS (Browser)
-                </button>
-            </div>
-            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 700;">Or Manual Coordinates</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                <div>
-                    <label for="cal-input-lat" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Latitude (°N)</label>
-                    <input type="number" step="0.000001" id="cal-input-lat" class="cmd-input" placeholder="e.g. 22.5726" style="width: 100%; font-family: var(--font-mono); font-size: 13px;">
-                </div>
-                <div>
-                    <label for="cal-input-lon" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Longitude (°E)</label>
-                    <input type="number" step="0.000001" id="cal-input-lon" class="cmd-input" placeholder="e.g. 88.3639" style="width: 100%; font-family: var(--font-mono); font-size: 13px;">
-                </div>
-            </div>
-            <div id="cal-status-msg" style="font-size: 11px; min-height: 18px; margin-bottom: 12px; color: #38bdf8;"></div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button class="btn-range" onclick="resetStationCalibration()" style="padding: 8px 14px; font-size: 12px; cursor: pointer;">Reset to Auto</button>
-                <button class="btn-primary" onclick="saveStationCalibration()" style="padding: 8px 18px; font-size: 12px; font-weight: 700; cursor: pointer;">Save &amp; Recalibrate</button>
             </div>
         </div>
     </div>
@@ -1382,17 +1302,6 @@
                         </div>
 
 
-                        <!-- Interactive Dark-Mode Cell Tower Map -->
-                        <div style="margin-bottom: 14px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">🗺️ Active Cell Tower Location &amp; Vector</span>
-                                    <button class="btn-range" onclick="openStationCalibration()" style="padding: 2px 8px; font-size: 10px; cursor: pointer;" title="Set or calibrate your receiver station coordinates">📍 Calibrate</button>
-                                </div>
-                                <span id="ins-tower-distance-badge" style="font-size: 10px; color: #38bdf8; font-family: var(--font-mono);">Calculating vector...</span>
-                            </div>
-                            <div id="cell-tower-map" style="height: 210px; width: 100%; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: #080c14; z-index: 1;"></div>
-                        </div>
 
                         <!-- Tower History Scorecard -->
                         <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
@@ -2166,231 +2075,7 @@
             }
         }
 
-        // ==========================================
-        // LEAFLET CELL TOWER MAP & STATION CALIBRATION
-        // ==========================================
-        let towerMap = null;
-        let towerMarker = null;
-        let gatewayMarker = null;
-        let towerVectorLine = null;
-        let lastTowerPos = null;
 
-        function getStationCoords() {
-            const savedLat = localStorage.getItem('fresnel_station_lat');
-            const savedLon = localStorage.getItem('fresnel_station_lon');
-            if (savedLat && savedLon) {
-                const lat = parseFloat(savedLat);
-                const lon = parseFloat(savedLon);
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    return { lat, lon, calibrated: true };
-                }
-            }
-            return { lat: 22.5726, lon: 88.3639, calibrated: false };
-        }
-
-        function openStationCalibration() {
-            const modal = document.getElementById('calibration-modal');
-            if (!modal) return;
-            const coords = getStationCoords();
-            document.getElementById('cal-input-lat').value = coords.calibrated ? coords.lat : '';
-            document.getElementById('cal-input-lon').value = coords.calibrated ? coords.lon : '';
-            document.getElementById('cal-status-msg').innerHTML = coords.calibrated ? '<span style="color:#34d399;">📍 Calibrated station coordinates are active.</span>' : '<span style="color:#94a3b8;">ℹ️ Using auto default coordinates.</span>';
-            modal.style.display = 'flex';
-        }
-
-        function closeStationCalibration() {
-            const modal = document.getElementById('calibration-modal');
-            if (modal) modal.style.display = 'none';
-        }
-
-        function detectGpsLocation() {
-            const msg = document.getElementById('cal-status-msg');
-            if (!navigator.geolocation) {
-                if (msg) msg.innerHTML = '<span style="color:#f87171;">❌ Geolocation not supported by your browser.</span>';
-                return;
-            }
-            if (msg) msg.innerHTML = '<span style="color:#38bdf8;">🛰️ Querying device GPS coordinates...</span>';
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude.toFixed(6);
-                    const lon = pos.coords.longitude.toFixed(6);
-                    document.getElementById('cal-input-lat').value = lat;
-                    document.getElementById('cal-input-lon').value = lon;
-                    if (msg) msg.innerHTML = `<span style="color:#34d399;">✅ Detected: ${lat}, ${lon} (Accuracy: ±${Math.round(pos.coords.accuracy)}m)</span>`;
-                },
-                (err) => {
-                    if (msg) msg.innerHTML = `<span style="color:#f87171;">❌ GPS Error: ${err.message}</span>`;
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        }
-
-        function saveStationCalibration() {
-            const latVal = parseFloat(document.getElementById('cal-input-lat').value);
-            const lonVal = parseFloat(document.getElementById('cal-input-lon').value);
-            const msg = document.getElementById('cal-status-msg');
-
-            if (isNaN(latVal) || isNaN(lonVal) || latVal < -90 || latVal > 90 || lonVal < -180 || lonVal > 180) {
-                if (msg) msg.innerHTML = '<span style="color:#f87171;">❌ Please enter valid coordinates (Lat -90..90, Lon -180..180).</span>';
-                return;
-            }
-
-            localStorage.setItem('fresnel_station_lat', latVal.toString());
-            localStorage.setItem('fresnel_station_lon', lonVal.toString());
-            if (msg) msg.innerHTML = '<span style="color:#34d399;">✅ Saved! Recalibrating station...</span>';
-
-            setTimeout(() => {
-                closeStationCalibration();
-                fetchInsights(true);
-            }, 600);
-        }
-
-        function resetStationCalibration() {
-            localStorage.removeItem('fresnel_station_lat');
-            localStorage.removeItem('fresnel_station_lon');
-            const msg = document.getElementById('cal-status-msg');
-            if (msg) msg.innerHTML = '<span style="color:#fbbf24;">🔄 Reset to default coordinates.</span>';
-            document.getElementById('cal-input-lat').value = '';
-            document.getElementById('cal-input-lon').value = '';
-            setTimeout(() => {
-                closeStationCalibration();
-                fetchInsights(true);
-            }, 600);
-        }
-
-        function initTowerMap(towers, activeEnb, activeCid) {
-            const mapEl = document.getElementById('cell-tower-map');
-            if (!mapEl || typeof L === 'undefined') return;
-
-            const coords = getStationCoords();
-            const baseLat = coords.lat;
-            const baseLon = coords.lon;
-
-            if (!towerMap) {
-                towerMap = L.map('cell-tower-map', {
-                    center: [baseLat, baseLon],
-                    zoom: 14,
-                    zoomControl: false,
-                    attributionControl: false,
-                    scrollWheelZoom: false
-                });
-
-                // 100% Free OpenStreetMap tiles (no API key, no watermark)
-                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(towerMap);
-
-                // ResizeObserver ensures map fills full width and centers when container resizes
-                if (window.ResizeObserver) {
-                    const ro = new ResizeObserver(() => {
-                        if (towerMap) {
-                            towerMap.invalidateSize(false);
-                            if (lastTowerPos) {
-                                const b = L.latLngBounds([[baseLat, baseLon], lastTowerPos]);
-                                towerMap.fitBounds(b, { padding: [35, 35], maxZoom: 15, animate: false });
-                            }
-                        }
-                    });
-                    ro.observe(mapEl);
-                }
-            }
-
-            // Calculate estimated tower vector and position
-            const activeTower = (towers || []).find(t => t.is_active) || (towers && towers[0]) || {};
-            const cellIdNum = parseInt(activeTower.cid || '46824970', 16) || 46824970;
-            // Physical cell offset based on sector azimuth and Timing Advance distance
-            const latOffset = ((cellIdNum % 1000) - 500) * 0.00003;
-            const lonOffset = (((Math.floor(cellIdNum / 1000)) % 1000) - 500) * 0.00003;
-            const towerLat = baseLat + (latOffset === 0 ? 0.008 : latOffset);
-            const towerLon = baseLon + (lonOffset === 0 ? 0.006 : lonOffset);
-            lastTowerPos = [towerLat, towerLon];
-
-            // Gateway marker (Modem node)
-            const popupHtml = `<b>Fresnel 5G Gateway</b><br>Modem Node${coords.calibrated ? '<br><span style="color:#34d399;font-size:10px;">📍 Calibrated Station</span>' : '<br><span style="color:#94a3b8;font-size:10px;">(Auto Default)</span>'}`;
-            if (!gatewayMarker) {
-                const gatewayIcon = L.divIcon({
-                    className: 'gateway-node',
-                    html: '<div style="width:12px;height:12px;border-radius:50%;background:#38bdf8;box-shadow:0 0 10px #38bdf8;border:2px solid #ffffff;"></div>',
-                    iconSize: [12, 12],
-                    iconAnchor: [6, 6]
-                });
-                gatewayMarker = L.marker([baseLat, baseLon], {
-                    icon: gatewayIcon,
-                    title: 'Fresnel 5G Gateway Station',
-                    alt: 'Fresnel 5G Gateway Station'
-                }).addTo(towerMap);
-                gatewayMarker.bindPopup(popupHtml, { autoPan: false });
-                if (gatewayMarker.getElement()) {
-                    gatewayMarker.getElement().setAttribute('aria-label', 'Fresnel 5G Gateway Station');
-                }
-            } else {
-                gatewayMarker.setLatLng([baseLat, baseLon]);
-                gatewayMarker.setPopupContent(popupHtml);
-                if (gatewayMarker.getElement()) {
-                    gatewayMarker.getElement().setAttribute('aria-label', 'Fresnel 5G Gateway Station');
-                }
-            }
-
-            // Pulsing radio wave marker for active cell tower
-            if (towerMarker) towerMap.removeLayer(towerMarker);
-            const towerIcon = L.divIcon({
-                className: 'radar-pulse',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            });
-
-            towerMarker = L.marker([towerLat, towerLon], {
-                icon: towerIcon,
-                title: 'Active Cell Tower Location',
-                alt: 'Active Cell Tower Location'
-            }).addTo(towerMap);
-            towerMarker.bindPopup(`<b>Connected Cell Tower</b><br>eNB: ${activeTower.enb || '--'}<br>CID: ${activeTower.cid || '--'}<br>Band: ${activeTower.band || 'n78'}`, { autoPan: false });
-            if (towerMarker.getElement()) {
-                towerMarker.getElement().setAttribute('aria-label', 'Active Cell Tower Location');
-            }
-
-            // Vector line connecting Gateway to Tower
-            if (towerVectorLine) towerMap.removeLayer(towerVectorLine);
-            towerVectorLine = L.polyline([[baseLat, baseLon], [towerLat, towerLon]], {
-                color: '#38bdf8',
-                dashArray: '4, 6',
-                weight: 2,
-                opacity: 0.8
-            }).addTo(towerMap);
-
-            // Recompute map container size and center properly
-            function fitAndCenter() {
-                if (!towerMap) return;
-                towerMap.invalidateSize(false);
-                const bounds = L.latLngBounds([[baseLat, baseLon], [towerLat, towerLon]]);
-                towerMap.fitBounds(bounds, { padding: [35, 35], maxZoom: 15, animate: false });
-            }
-
-            fitAndCenter();
-            // Staggered size invalidation to avoid corner tucking after initial layout/font render
-            setTimeout(fitAndCenter, 150);
-            setTimeout(fitAndCenter, 500);
-
-            // Calculate distance and azimuth
-            const dLat = (towerLat - baseLat) * 111.32;
-            const dLon = (towerLon - baseLon) * 111.32 * Math.cos(baseLat * Math.PI / 180);
-            const distanceKm = Math.sqrt(dLat * dLat + dLon * dLon);
-            let azimuthDeg = Math.round((Math.atan2(dLon, dLat) * 180 / Math.PI + 360) % 360);
-            let compassHeading = 'N';
-            if (azimuthDeg >= 22.5 && azimuthDeg < 67.5) compassHeading = 'NE';
-            else if (azimuthDeg >= 67.5 && azimuthDeg < 112.5) compassHeading = 'E';
-            else if (azimuthDeg >= 112.5 && azimuthDeg < 157.5) compassHeading = 'SE';
-            else if (azimuthDeg >= 157.5 && azimuthDeg < 202.5) compassHeading = 'S';
-            else if (azimuthDeg >= 202.5 && azimuthDeg < 247.5) compassHeading = 'SW';
-            else if (azimuthDeg >= 247.5 && azimuthDeg < 292.5) compassHeading = 'W';
-            else if (azimuthDeg >= 292.5 && azimuthDeg < 337.5) compassHeading = 'NW';
-
-            const badge = document.getElementById('ins-tower-distance-badge');
-            if (badge) {
-                badge.innerHTML = `Dist: <b>~${distanceKm.toFixed(2)} km</b> (TA: 16) • Azimuth: <b>${azimuthDeg}° ${compassHeading}</b>${coords.calibrated ? ' • <span style="color:#34d399;">📍 Calibrated</span>' : ''}`;
-            }
-        }
 
         // ==========================================
         // NETWORK INTELLIGENCE & INSIGHTS FUNCTIONS
@@ -2606,7 +2291,6 @@
                 currentBbData = [...(cg.hourly_profile || [])].reverse();
                 renderBbTablePaged();
                 renderCongestionChart(cg.hourly_profile || []);
-                initTowerMap(ti.towers || [], ti.active_enb, ti.active_cid);
 
                 // 7. SLA Availability
                 const sla = d.sla || {};
