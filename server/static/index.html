@@ -410,7 +410,7 @@
             <h2>Modem Telemetry Hub</h2>
             <p>Access is protected. Please enter your dashboard UUID key to authenticate.</p>
             <div class="auth-input-wrap">
-                <input type="password" id="auth-password-input" class="auth-input" placeholder="Enter UUID Password" autocomplete="current-password" spellcheck="false" />
+                <input type="password" id="auth-password-input" class="auth-input" placeholder="Enter UUID Password" autocomplete="current-password" spellcheck="false" aria-label="Dashboard UUID Password" />
             </div>
             <button class="auth-btn" onclick="submitAuth()">Unlock Dashboard</button>
             <div class="auth-error" id="auth-error-msg">Invalid password key. Please verify and retry.</div>
@@ -1126,7 +1126,7 @@
                 </div>
                 <div class="terminal-box" id="terminal-screen">> Ready. Enter AT commands below or choose a preset above...</div>
                 <div class="cmd-bar">
-                    <input type="text" id="at-input" class="cmd-input" placeholder="Type AT command (e.g. ATI, AT+CSQ, AT+QENG=&quot;servingcell&quot;)" autocomplete="off" />
+                    <input type="text" id="at-input" class="cmd-input" placeholder="Type AT command (e.g. ATI, AT+CSQ, AT+QENG=&quot;servingcell&quot;)" autocomplete="off" aria-label="AT Command input" />
                     <button class="cmd-btn" onclick="sendManualCommand()">Execute AT</button>
                 </div>
             </div>
@@ -1161,7 +1161,7 @@
                     <div style="margin-bottom: 20px;">
                         <h4 style="font-size: 12px; margin-bottom: 8px; color: #fff;">Dial USSD Code (Balance / Info)</h4>
                         <div class="form-row">
-                            <input type="text" id="ussd-input" class="form-input" placeholder="*333#" value="*333#" />
+                            <input type="text" id="ussd-input" class="form-input" placeholder="*333#" value="*333#" aria-label="USSD Code to dial" />
                             <button class="form-btn" onclick="sendUSSD()">Dial USSD</button>
                         </div>
                         <div id="ussd-result-box" style="font-family: var(--font-mono); font-size: 11px; color: #34d399; margin-top: 4px;"></div>
@@ -1170,10 +1170,10 @@
                     <div>
                         <h4 style="font-size: 12px; margin-bottom: 8px; color: #fff;">Send Outbound SMS</h4>
                         <div class="form-row">
-                            <input type="text" id="sms-num-input" class="form-input" placeholder="Recipient Number (+91...)" />
+                            <input type="text" id="sms-num-input" class="form-input" placeholder="Recipient Number (+91...)" aria-label="SMS Recipient Number" />
                         </div>
                         <div class="form-row">
-                            <input type="text" id="sms-msg-input" class="form-input" placeholder="Message text" />
+                            <input type="text" id="sms-msg-input" class="form-input" placeholder="Message text" aria-label="SMS Message text" />
                             <button class="form-btn" onclick="sendSMS()">Send SMS</button>
                         </div>
                         <div id="sms-status-box" style="font-size: 11px; color: var(--text-muted);"></div>
@@ -1220,10 +1220,10 @@
                         Receive instant alerts on your phone whenever the modem switches towers, drops from n78 to n28, rotates public IP, or receives 2FA/OTPs.
                     </p>
                     <div class="form-row">
-                        <input type="password" id="tg-token-input" class="form-input" placeholder="Telegram Bot Token (e.g. 123456:ABC...)" />
+                        <input type="password" id="tg-token-input" class="form-input" placeholder="Telegram Bot Token (e.g. 123456:ABC...)" aria-label="Telegram Bot Token" />
                     </div>
                     <div class="form-row">
-                        <input type="text" id="tg-chat-input" class="form-input" placeholder="Telegram Chat ID (e.g. 98765432)" />
+                        <input type="text" id="tg-chat-input" class="form-input" placeholder="Telegram Chat ID (e.g. 98765432)" aria-label="Telegram Chat ID" />
                         <button class="form-btn" onclick="saveTelegramConfig()">Save & Test Alert</button>
                     </div>
                     <div id="tg-status-box" style="font-size: 11px; color: #34d399; margin-top: 6px;"></div>
@@ -1412,8 +1412,8 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 11px;">
                             <span style="color: var(--text-muted);" id="ins-towers-page-info">Showing towers...</span>
                             <div style="display: flex; gap: 6px;">
-                                <button class="btn-range" id="btn-towers-prev" onclick="prevTowersPage()" style="padding: 2px 8px; font-size: 10px;">← Prev</button>
-                                <button class="btn-range" id="btn-towers-next" onclick="nextTowersPage()" style="padding: 2px 8px; font-size: 10px;">Next →</button>
+                                <button class="btn-range" id="btn-ins-towers-prev" onclick="prevTowersPage()" style="padding: 2px 8px; font-size: 10px;">← Prev</button>
+                                <button class="btn-range" id="btn-ins-towers-next" onclick="nextTowersPage()" style="padding: 2px 8px; font-size: 10px;">Next →</button>
                             </div>
                         </div>
                     </div>
@@ -1838,8 +1838,8 @@
                         <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Real-time query inspections across all connected LAN clients</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                        <input type="text" id="dns-search-filter" class="form-input" style="padding: 6px 12px; font-size: 12px; width: 180px;" placeholder="Search domain / IP..." oninput="filterDnsQueryFeed()">
-                        <select id="dns-type-filter" class="form-select" style="padding: 6px 10px; font-size: 12px; width: 140px;" onchange="filterDnsQueryFeed()">
+                        <input type="text" id="dns-search-filter" class="form-input" style="padding: 6px 12px; font-size: 12px; width: 180px;" placeholder="Search domain / IP..." oninput="filterDnsQueryFeed()" aria-label="Search domain or IP">
+                        <select id="dns-type-filter" class="form-select" style="padding: 6px 10px; font-size: 12px; width: 140px;" onchange="filterDnsQueryFeed()" aria-label="Filter DNS query status">
                             <option value="ALL">All Statuses</option>
                             <option value="BLOCKED">🛑 Blocked Only</option>
                             <option value="CACHED">⚡ Cached Only</option>
@@ -1887,7 +1887,7 @@
                     Benchmark query response time and verify if a specific domain is filtered by the ad/tracker sinkhole.
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <input type="text" id="dns-test-input-vps" class="form-input" style="flex: 1; min-width: 260px;" placeholder="Domain (e.g. google.com, doubleclick.net, apple.com)" value="google.com" onkeydown="if(event.key==='Enter') runDnsBenchmarkVPS()">
+                    <input type="text" id="dns-test-input-vps" class="form-input" style="flex: 1; min-width: 260px;" placeholder="Domain (e.g. google.com, doubleclick.net, apple.com)" value="google.com" onkeydown="if(event.key==='Enter') runDnsBenchmarkVPS()" aria-label="Domain for DNS benchmark">
                     <button class="form-btn primary" onclick="runDnsBenchmarkVPS()" style="min-width: 120px;">⚡ Benchmark</button>
                 </div>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
@@ -2315,11 +2315,21 @@
                     iconSize: [12, 12],
                     iconAnchor: [6, 6]
                 });
-                gatewayMarker = L.marker([baseLat, baseLon], { icon: gatewayIcon }).addTo(towerMap);
+                gatewayMarker = L.marker([baseLat, baseLon], {
+                    icon: gatewayIcon,
+                    title: 'Fresnel 5G Gateway Station',
+                    alt: 'Fresnel 5G Gateway Station'
+                }).addTo(towerMap);
                 gatewayMarker.bindPopup(popupHtml, { autoPan: false });
+                if (gatewayMarker.getElement()) {
+                    gatewayMarker.getElement().setAttribute('aria-label', 'Fresnel 5G Gateway Station');
+                }
             } else {
                 gatewayMarker.setLatLng([baseLat, baseLon]);
                 gatewayMarker.setPopupContent(popupHtml);
+                if (gatewayMarker.getElement()) {
+                    gatewayMarker.getElement().setAttribute('aria-label', 'Fresnel 5G Gateway Station');
+                }
             }
 
             // Pulsing radio wave marker for active cell tower
@@ -2330,8 +2340,15 @@
                 iconAnchor: [7, 7]
             });
 
-            towerMarker = L.marker([towerLat, towerLon], { icon: towerIcon }).addTo(towerMap);
+            towerMarker = L.marker([towerLat, towerLon], {
+                icon: towerIcon,
+                title: 'Active Cell Tower Location',
+                alt: 'Active Cell Tower Location'
+            }).addTo(towerMap);
             towerMarker.bindPopup(`<b>Connected Cell Tower</b><br>eNB: ${activeTower.enb || '--'}<br>CID: ${activeTower.cid || '--'}<br>Band: ${activeTower.band || 'n78'}`, { autoPan: false });
+            if (towerMarker.getElement()) {
+                towerMarker.getElement().setAttribute('aria-label', 'Active Cell Tower Location');
+            }
 
             // Vector line connecting Gateway to Tower
             if (towerVectorLine) towerMap.removeLayer(towerVectorLine);
@@ -2389,8 +2406,8 @@
         function renderTowersTablePaged() {
             const tb = document.getElementById('ins-towers-body');
             const info = document.getElementById('ins-towers-page-info');
-            const btnPrev = document.getElementById('btn-towers-prev');
-            const btnNext = document.getElementById('btn-towers-next');
+            const btnPrev = document.getElementById('btn-ins-towers-prev');
+            const btnNext = document.getElementById('btn-ins-towers-next');
             if (!tb) return;
 
             const total = currentTowersData.length;
