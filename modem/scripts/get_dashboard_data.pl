@@ -657,9 +657,9 @@ sub sample_and_emit {
         }
         close($dfh);
 
-        # Truncate /tmp/dnsmasq.log if > 500KB to prevent RAM exhaustion
+        # Truncate /tmp/dnsmasq.log in-place if > 512KB to prevent RAM exhaustion without breaking inode or open file descriptors
         if (-s $dns_logfile && -s $dns_logfile > 512000) {
-            system("tail -n 1000 /tmp/dnsmasq.log > /tmp/dnsmasq.log.tmp && mv /tmp/dnsmasq.log.tmp /tmp/dnsmasq.log 2>/dev/null");
+            system("tail -n 1000 /tmp/dnsmasq.log > /tmp/dnsmasq.log.tmp && cat /tmp/dnsmasq.log.tmp > /tmp/dnsmasq.log && rm -f /tmp/dnsmasq.log.tmp && chmod 666 /tmp/dnsmasq.log && chown nobody:nogroup /tmp/dnsmasq.log 2>/dev/null; killall -SIGUSR2 dnsmasq 2>/dev/null || true");
         }
     }
 

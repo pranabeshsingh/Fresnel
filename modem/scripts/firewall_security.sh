@@ -67,7 +67,10 @@ if [ -f "/sys/devices/platform/a600000.ssusb/power/control" ]; then
     echo "on" > /sys/devices/platform/a600000.ssusb/power/control 2>/dev/null
 fi
 
-# 8. High-Performance In-Memory DNS Caching (Eliminate Cellular DNS Latency)
+# 8. High-Performance In-Memory DNS Caching & Real-Time Query Logging
+touch /tmp/dnsmasq.log 2>/dev/null
+chmod 666 /tmp/dnsmasq.log 2>/dev/null
+chown nobody:nogroup /tmp/dnsmasq.log 2>/dev/null
 for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
     if [ -f "$conf" ]; then
         grep -q "cache-size=" "$conf" || echo "cache-size=10000" >> "$conf"
@@ -75,10 +78,14 @@ for conf in /etc/data/dnsmasq.conf /systemrw/data/dnsmasq.conf; do
         grep -q "max-cache-ttl=" "$conf" || echo "max-cache-ttl=86400" >> "$conf"
         grep -q "neg-ttl=" "$conf" || echo "neg-ttl=60" >> "$conf"
         grep -q "all-servers" "$conf" || echo "all-servers" >> "$conf"
+        grep -q "log-queries" "$conf" || echo "log-queries" >> "$conf"
+        grep -q "log-facility=" "$conf" || echo "log-facility=/tmp/dnsmasq.log" >> "$conf"
+        grep -q "log-async" "$conf" || echo "log-async=25" >> "$conf"
         grep -q "adblock_hosts" "$conf" || echo "addn-hosts=/data/simpleadmin/adblock_hosts" >> "$conf"
     fi
 done
 killall -HUP dnsmasq 2>/dev/null || true
+killall -SIGUSR2 dnsmasq 2>/dev/null || true
 
 # 9. Conntrack Fast-Expiration & Table Tuning (Prevent P2P/Burst CPU Spikes)
 sysctl -w net.netfilter.nf_conntrack_tcp_timeout_established=1200 >/dev/null 2>&1

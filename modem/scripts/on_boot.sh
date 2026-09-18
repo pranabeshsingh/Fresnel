@@ -27,6 +27,7 @@ done
 mkdir -p /tmp/adguard_work /tmp/adguard_work/data /tmp/xtra /tmp/fota_client /tmp/www_runtime
 chown -R gps:gps /tmp/xtra 2>/dev/null || true
 chown -R www-data:www-data /tmp/www_runtime 2>/dev/null || true
+touch /tmp/dnsmasq.log && chmod 666 /tmp/dnsmasq.log && chown nobody:nogroup /tmp/dnsmasq.log 2>/dev/null || true
 
 if [ ! -L /data/vendor/location/xtra ]; then
     rm -rf /data/vendor/location/xtra 2>/dev/null
