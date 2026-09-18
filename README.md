@@ -6,6 +6,7 @@
 [![Wiki: Guides](https://img.shields.io/badge/Wiki-Official%20Documentation-purple.svg)](https://github.com/pranabeshsingh/Fresnel/wiki)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-brightgreen.svg)](server/)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-blue.svg)](SECURITY.md)
+[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **Fresnel** is a complete, production-tested open-source software suite, embedded web dashboard, and cloud telemetry infrastructure for **Qualcomm Snapdragon X55 (SDXPRAIRIE)** 5G cellular modems and gateways (Tri Cascade SG500M2-X, Quectel RM500Q/RM502Q, Suncomm, and compatible M.2-to-USB/Ethernet platforms). Named after Augustin-Jean Fresnel and the fundamental *Fresnel Zone* of radio propagation.
 
@@ -174,6 +175,8 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 ├── hardware-guides/                # In-depth engineering guides
 ├── assets/                         # Architecture diagrams & schematics
 ├── .env.example                    # Environment variable template
+├── CONTRIBUTING.md                 # Contribution guidelines & code standards
+├── SECURITY.md                     # Vulnerability disclosure policy & threat model
 └── LICENSE                         # The Unlicense (Public Domain) + Disclaimer
 ```
 
@@ -181,10 +184,17 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 
 ## 🔒 Security & Privacy
 
-This repository contains sanitized code. When deploying:
-- Generate unique, high-entropy tokens for `AUTH_TOKEN` in `.env` and `telemetry.conf`.
-- Change the default dashboard password (`admin`) upon first login via the web UI.
-- Never commit Oracle Cloud wallets, `.key`, `.pem`, or Telegram tokens to public repositories.
+The codebase adheres to strict security standards (CodeQL verified):
+- **Zero Cleartext Credentials**: The web dashboard relies on cryptographically derived session tokens (`SHA-256`) and secure `HttpOnly; SameSite=Strict` cookies. Passwords and keys are never stored in browser `localStorage`.
+- **XSS & Injection Protection**: Modem and server interfaces sanitize all dynamic inputs, SMS payloads, and DNS diagnostics.
+- **Firewall & Isolation**: `firewall_security.sh` drops cellular WAN ingress, preventing remote exploitation of local diagnostic interfaces.
+- **Vulnerability Reporting**: Please consult [SECURITY.md](SECURITY.md) for confidential disclosure instructions.
+
+---
+
+## 🤝 Contributing
+
+Contributions, bug reports, and enhancements are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on code style, baseband safety practices, and the pull request process.
 
 ---
 

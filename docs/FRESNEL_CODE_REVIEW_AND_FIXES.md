@@ -318,17 +318,35 @@ Add an initialization DDL script or execute idempotent `CREATE TABLE` and `CREAT
 
 ---
 
+### 10. [HIGH] CodeQL Security Alerts Remediation (Alerts #1 through #7)
+
+A full automated security audit using GitHub CodeQL identified seven high-severity vulnerabilities across the web portals and cloud backends:
+
+1. **Alert #7: DOM Text Reinterpreted as HTML (XSS)** — `modem/www/index.html:2803`
+   - **Vulnerability**: Unsanitized user domain input from the DNS diagnostic test input was interpolated directly into `resBox.innerHTML`, enabling DOM-based XSS.
+   - **Remediation**: Escaped all user inputs with `escapeHtml()` and sanitized dual-stack DNS record outputs and failure messages.
+2. **Alerts #5 & #6: Cleartext Storage of Sensitive Data in `localStorage`** — `server/static/index.html:2042, 2084`
+   - **Vulnerability**: Passwords and bearer keys were persisted in browser `localStorage` (`hub_auth_key`), vulnerable to extraction via XSS.
+   - **Remediation**: Removed all `localStorage` credential persistence. The client maintains auth keys strictly in-memory during active sessions and relies on secure HTTP session cookies. Added address-bar URL sanitization (`history.replaceState`) and `/api/auth/logout` session invalidation.
+3. **Alerts #1, #2, #3, #4: Clear-Text Storage of Sensitive Data in Cookies** — `server/server_sqlite.py:1024, 1461` and `server/server_oracle.py:1968, 2490`
+   - **Vulnerability**: Raw master password (`DASHBOARD_PASSWORD`) was stored directly in `Set-Cookie` headers.
+   - **Remediation**: Derived a one-way cryptographic SHA-256 session token (`SESSION_TOKEN`), enforced `HttpOnly`, `SameSite=Strict`, and conditional `Secure` cookie flags, and retained backwards-compatible validation in `is_authenticated()`.
+
+---
+
 ## 📋 Prioritized Action Items for Remediation
 
-| Priority | Component | Issue | Action |
-| :--- | :--- | :--- | :--- |
-| **P0** | Modem CGI | Path Traversal Auth Bypass (`token=../../etc/passwd`) | Sanitize `$token` using `tr -cd 'a-fA-F0-9'` in all CGI scripts |
-| **P0** | Modem & Server UI | Stored XSS via SMS in Web GUI & Cloud Dashboard | Apply `escapeHtml` to SMS sender/body and eliminate unescaped inline `onclick` JSON |
-| **P0** | Server | Docker loopback binding (`127.0.0.1`) | Bind to `0.0.0.0` so container port mapping works |
-| **P1** | Modem Scripts | Serial AT bus race condition on `/dev/smd7` | Ensure all serial scripts acquire `/tmp/smd7.lock` via `flock` |
-| **P1** | Modem Scripts | Polled `SHELL` command execution | Remove `SHELL` type or enforce strict allowlist to prevent RCE backdoor |
-| **P1** | Modem CGI | CGI scripts desynchronized with `scripts/` | Eliminate duplicate code; symlink CGI scripts to tested scripts |
-| **P1** | Server PWA | Missing `/chart.umd.min.js` breaking `sw.js` | Remove missing asset from `STATIC_ASSETS` in `sw.js` |
-| **P2** | Server SQLite | SQLite database locks | Enable `PRAGMA journal_mode=WAL;` and implement connection context manager |
-| **P2** | Server Oracle | Missing DDL table creation in `init_db()` | Implement idempotent DDL bootstrap for Oracle Cloud ADB |
-| **P2** | Modem Auth | Plaintext password storage in `auth.conf` | Hash passwords with SHA-256 / PBKDF2 and use CSPRNG for session tokens |
+| Priority | Component | Issue | Action | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **P0** | Modem CGI | Path Traversal Auth Bypass (`token=../../etc/passwd`) | Sanitize `$token` using `tr -cd 'a-fA-F0-9'` in all CGI scripts | **Resolved** |
+| **P0** | Modem & Server UI | Stored XSS via SMS in Web GUI & Cloud Dashboard | Apply `escapeHtml` to SMS sender/body and eliminate unescaped inline `onclick` JSON | **Resolved** |
+| **P0** | Modem Web | DOM-based XSS in DNS diagnostics (CodeQL #7) | Apply `escapeHtml` to domain inputs and DNS records | **Resolved** |
+| **P0** | Server | Docker loopback binding (`127.0.0.1`) | Bind to `0.0.0.0` so container port mapping works | **Resolved** |
+| **P0** | Server UI & API | Cleartext credential storage in `localStorage` & Cookies (CodeQL #1–#6) | Implement cryptographic `SESSION_TOKEN`, `HttpOnly` cookies, and purge `localStorage` | **Resolved** |
+| **P1** | Modem Scripts | Serial AT bus race condition on `/dev/smd7` | Ensure all serial scripts acquire `/tmp/smd7.lock` via `flock` | **Resolved** |
+| **P1** | Modem Scripts | Polled `SHELL` command execution | Remove `SHELL` type or enforce strict allowlist to prevent RCE backdoor | **Resolved** |
+| **P1** | Modem CGI | CGI scripts desynchronized with `scripts/` | Eliminate duplicate code; symlink CGI scripts to tested scripts | **Resolved** |
+| **P1** | Server PWA | Missing `/chart.umd.min.js` breaking `sw.js` | Remove missing asset from `STATIC_ASSETS` in `sw.js` | **Resolved** |
+| **P2** | Server SQLite | SQLite database locks | Enable `PRAGMA journal_mode=WAL;` and implement connection context manager | **Resolved** |
+| **P2** | Server Oracle | Missing DDL table creation in `init_db()` | Implement idempotent DDL bootstrap for Oracle Cloud ADB | **Resolved** |
+| **P2** | Modem Auth | Plaintext password storage in `auth.conf` | Hash passwords with SHA-256 / PBKDF2 and use CSPRNG for session tokens | **Resolved** |

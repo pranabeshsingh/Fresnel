@@ -64,9 +64,17 @@ Log in with the password configured in `DASHBOARD_PASSWORD`.
 
 ## 📡 REST API Contracts
 
-All telemetry ingestion endpoints require authentication via the `Authorization: Bearer <AUTH_TOKEN>` header.
+All user dashboard endpoints are secured via authenticated session cookies (`HttpOnly; SameSite=Strict`) or `Authorization: Bearer <token>` / `X-Auth-Key` headers. Ingestion endpoints from modems require `Authorization: Bearer <AUTH_TOKEN>`.
 
-### 1. Ingest Telemetry (`POST /api/telemetry`)
+### 1. Dashboard Authentication (`POST /api/auth/login` & `POST /api/auth/logout`)
+- **`POST /api/auth/login`**:
+  - Request body: `{"password": "<DASHBOARD_PASSWORD>"}`
+  - Response: `200 OK` with `{"status": "ok", "token": "<SESSION_TOKEN>"}` and `Set-Cookie: auth_token=<SESSION_TOKEN>; Path=/; SameSite=Strict; HttpOnly; Secure`
+  - Eliminates cleartext credential storage by issuing a cryptographically derived SHA-256 session token stored in an `HttpOnly` browser cookie.
+- **`POST /api/auth/logout`**:
+  - Invalidates the active session and expires the cookie (`Max-Age=0`).
+
+### 2. Ingest Telemetry (`POST /api/telemetry`)
 Emitted by `telemetry_pusher.sh` on the modem.
 
 - **Headers**:

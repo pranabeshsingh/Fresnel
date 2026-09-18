@@ -39,19 +39,20 @@ The web interface is hosted directly by the modem's lightweight `httpd` server o
 
 ---
 
-## 🔐 Session Authentication & Credentials
+## 🔐 Session Authentication & Hardening
 
-- **Initial Credentials**:
-  - Default URL: `http://172.16.10.1:8080/login.html`
-  - Default Password: `admin`
-- **Token Architecture**:
-  - Authenticated sessions issue a high-entropy pseudo-random token stored in `/tmp/gw_sessions/`.
-  - Session tokens expire automatically after 24 hours of inactivity.
-  - The session folder is restricted to root only (`chmod 700 /tmp/gw_sessions`).
-- **Changing the Administrative Password**:
-  - In the web GUI, navigate to the **Security** tab.
-  - Enter the current password and the new high-entropy password.
-  - Credentials are cryptographically hashed and stored in `/data/simpleadmin/data/admin.pw`.
+### 1. Modem Gateway Portal (`:8080`)
+- **Initial Credentials**: Default URL `http://172.16.10.1:8080/login.html`, default password `admin`.
+- **Token Architecture**: Authenticated sessions issue a high-entropy pseudo-random token stored in `/tmp/gw_sessions/` (permissions `700`). Tokens expire automatically after 24 hours.
+- **Path Traversal Protection**: All CGI entry points sanitize tokens using strict character whitelisting (`tr -cd 'a-fA-F0-9'`).
+- **DOM XSS Sanitization**: Dynamic user inputs (such as DNS query targets, SMS sender/body payloads, and AT command responses) pass through `escapeHtml()` sanitizers before rendering.
+
+### 2. Cloud Telemetry Server (`:8000`)
+- **Cryptographic Session Tokens**: Replaced raw password cookies with cryptographically derived `SESSION_TOKEN` (`SHA-256` digest of secret and token). Raw credentials are never stored in cookies.
+- **Secure Cookie Attributes**: Session cookies enforce `HttpOnly`, `SameSite=Strict`, and conditional `Secure` flags when accessed over TLS/HTTPS.
+- **Zero Cleartext Client Storage**: Authentication tokens are maintained in-memory only during the browser session, avoiding cleartext `localStorage` persistence.
+- **Address Bar Sanitization**: Query parameter credentials (`?key=...`) are automatically stripped from the browser URL upon load via `window.history.replaceState` to prevent leakage in browser history or referrer logs.
+- **Active Invalidation**: The `/api/auth/logout` endpoint expires session cookies immediately.
 
 ---
 
