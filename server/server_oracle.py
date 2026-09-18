@@ -2506,7 +2506,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                         row_dict = dict(zip(cols, row))
                 if row_dict:
                     init_data = build_telemetry_dict(row_dict)
-                    init_msg = f"data: {json.dumps({'type': 'telemetry', 'data': init_data, 'public_ip': row[2], 'timestamp': row[1]})}\n\n"
+                    init_msg = f"data: {json.dumps({'type': 'telemetry', 'data': init_data, 'public_ip': row_dict.get('public_ip', '--'), 'timestamp': row_dict.get('timestamp', int(time.time()))})}\n\n"
                     self.wfile.write(init_msg.encode("utf-8"))
                     self.wfile.flush()
 
