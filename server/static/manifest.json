@@ -1,0 +1,19 @@
+{
+  "name": "Fresnel 5G Cloud Hub",
+  "short_name": "Fresnel 5G",
+  "description": "Snapdragon X55 5G Gateway Telemetry & RF Intelligence Portal",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080c14",
+  "theme_color": "#080c14",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23080c14'/><text y='70' x='15' font-size='60'>📡</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

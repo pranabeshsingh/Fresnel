@@ -200,7 +200,7 @@ def seed_peak_speeds():
                     peak_dl_today_bps = int(row[0] or 0)
                     peak_ul_today_bps = int(row[1] or 0)
 
-            cur.execute('SELECT "date", peak_download_bps FROM daily_usage WHERE peak_download_bps IS NOT NULL ORDER BY peak_download_bps DESC FETCH FIRST 1 ROWS ONLY')
+            cur.execute('SELECT "date", peak_download_bps FROM daily_usage WHERE peak_download_bps IS NOT NULL AND peak_download_bps <= 2500000000 ORDER BY peak_download_bps DESC FETCH FIRST 1 ROWS ONLY')
             row_dl = cur.fetchone()
             if row_dl and row_dl[1]:
                 with peaks_lock:
@@ -210,7 +210,7 @@ def seed_peak_speeds():
                     except Exception:
                         peak_dl_lifetime_ts = now
 
-            cur.execute('SELECT "date", peak_upload_bps FROM daily_usage WHERE peak_upload_bps IS NOT NULL ORDER BY peak_upload_bps DESC FETCH FIRST 1 ROWS ONLY')
+            cur.execute('SELECT "date", peak_upload_bps FROM daily_usage WHERE peak_upload_bps IS NOT NULL AND peak_upload_bps <= 2500000000 ORDER BY peak_upload_bps DESC FETCH FIRST 1 ROWS ONLY')
             row_ul = cur.fetchone()
             if row_ul and row_ul[1]:
                 with peaks_lock:
@@ -479,6 +479,97 @@ def get_network_insights():
         print("[Insights] Error generating insights:", e)
         traceback.print_exc()
         return {"status": "error", "message": str(e)}
+
+
+# Proactive RF Alerts & Automation Tracker
+last_rf_alert_ts = 0
+last_flapping_alert_ts = 0
+recent_handover_timestamps = []
+
+def check_proactive_rf_alerts(sinr_val, enb, cid, now):
+    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps, last_state
+    
+    if sinr_val is not None and -30 < sinr_val < 4.0:
+        if now - last_rf_alert_ts > 1800:
+            last_rf_alert_ts = now
+            log_alert("rf_degradation", "warning", "⚠️ RF Channel Interference Warning",
+                      f"Cellular link SINR dropped to +{sinr_val} dB. High interference or cell-edge degradation detected.")
+
+    current_cell = f"{enb}/{cid}"
+    prev_cell = f"{last_state.get('enb')}/{last_state.get('cid')}"
+    if enb and enb != "-" and last_state.get("enb") and current_cell != prev_cell:
+        recent_handover_timestamps.append(now)
+        recent_handover_timestamps = [t for t in recent_handover_timestamps if now - t <= 600]
+        if len(recent_handover_timestamps) >= 3:
+            if now - last_flapping_alert_ts > 1800:
+                last_flapping_alert_ts = now
+                log_alert("tower_flapping", "warning", "⚠️ Cell Tower Flapping Detected",
+                          f"Modem transitioned between towers {len(recent_handover_timestamps)} times in the last 10 minutes. Check antenna alignment or band lock.")
+
+def midnight_digest_worker():
+    while True:
+        try:
+            now = datetime.datetime.now(IST_TZ)
+            tomorrow = now.date() + datetime.timedelta(days=1)
+            target = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 5, tzinfo=IST_TZ)
+            sleep_sec = max(10, int((target - now).total_seconds()))
+            time.sleep(sleep_sec)
+
+            token = get_setting("telegram_bot_token")
+            chat_id = get_setting("telegram_chat_id")
+            if not token or not chat_id:
+                continue
+
+            yesterday_str = (datetime.datetime.now(IST_TZ) - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            with get_db() as (conn, cur):
+                cur.execute('SELECT bytes_download, bytes_upload, bytes_total, peak_download_bps, peak_upload_bps FROM daily_usage WHERE "date" = :1', (yesterday_str,))
+                u_row = cur.fetchone()
+                
+                t_now = int(time.time())
+                t24 = t_now - 86400
+                cur.execute("""
+                    SELECT
+                        COALESCE(SUM(CASE WHEN start_ts < :now_val AND COALESCE(end_ts, :now_val) > :t24
+                                          THEN LEAST(COALESCE(end_ts, :now_val), :now_val) - GREATEST(start_ts, :t24) ELSE 0 END), 0),
+                        COUNT(CASE WHEN start_ts < :now_val AND COALESCE(end_ts, :now_val) > :t24 THEN 1 END)
+                    FROM downtime_history
+                    WHERE start_ts < :now_val AND COALESCE(end_ts, :now_val) > :t24
+                """, {"now_val": t_now, "t24": t24})
+                sla_row = cur.fetchone()
+
+            dl_b = u_row[0] if u_row else 0
+            ul_b = u_row[1] if u_row else 0
+            tot_b = u_row[2] if u_row else 0
+            pk_dl = u_row[3] if u_row else 0
+            pk_ul = u_row[4] if u_row else 0
+
+            down_sec = sla_row[0] if sla_row else 0
+            outages = sla_row[1] if sla_row else 0
+            sla_pct = max(0.0, min(100.0, (86400 - down_sec) / 86400 * 100.0))
+
+            text = (
+                f"🌙 *Fresnel 5G Daily Midnight Digest*\n"
+                f"📅 *Date*: `{yesterday_str}`\n\n"
+                f"📊 *Data Consumed*:\n"
+                f"• Total: *{format_bytes(tot_b)}*\n"
+                f"• Download: `{format_bytes(dl_b)}`\n"
+                f"• Upload: `{format_bytes(ul_b)}`\n\n"
+                f"⚡ *Top Speeds Reached*:\n"
+                f"• Peak Downlink: *{format_bps(pk_dl)}*\n"
+                f"• Peak Uplink: *{format_bps(pk_ul)}*\n\n"
+                f"🛡️ *24h SLA Availability*: *{sla_pct:.2f}%*\n"
+                f"• Downtime: `{format_duration(down_sec)}` ({outages} outages)\n\n"
+                f"🌐 [Open Live Dashboard](https://modem.trylocalhost.com)"
+            )
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            payload = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_web_page_preview": True}).encode("utf-8")
+            req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                pass
+            print(f"[Midnight Digest] Sent digest for {yesterday_str} via Telegram")
+        except Exception as e:
+            print("[Midnight Digest] Error:", e)
+            time.sleep(60)
 
 def init_db():
     init_pool()
@@ -1395,7 +1486,17 @@ def record_telemetry(data, client_ip=""):
         dl_bps_val = int(float(speed_data.get("download_bps", 0) or 0))
         ul_bps_val = int(float(speed_data.get("upload_bps", 0) or 0))
         
+        # Hardware PHY rate sanity clamp (SDX55 Gigabit/USB3 interface ceiling: 2.5 Gbps)
+        MAX_PHY_BPS = 2_500_000_000
+        if dl_bps_val > MAX_PHY_BPS:
+            dl_bps_val = min(max(0, dl_bps_val - 4294967296 if dl_bps_val >= 4294967296 else 0), MAX_PHY_BPS)
+        if ul_bps_val > MAX_PHY_BPS:
+            ul_bps_val = min(max(0, ul_bps_val - 4294967296 if ul_bps_val >= 4294967296 else 0), MAX_PHY_BPS)
+
         date_str = datetime.datetime.fromtimestamp(now, tz=IST_TZ).strftime("%Y-%m-%d")
+
+        # Check proactive RF degradation and cell flapping alerts
+        check_proactive_rf_alerts(sinr_val, enb, cid, now)
 
         # Update live in-memory peak speeds tracker
         with peaks_lock:
@@ -2155,6 +2256,60 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             }).encode("utf-8"))
             return
 
+
+        # CSV Export: Daily Usage History
+        if parsed.path == "/api/telemetry/export/usage.csv":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="modem_daily_usage.csv"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            with get_db() as (conn, cur):
+                cur.execute('SELECT "date", bytes_download, bytes_upload, bytes_total, peak_download_bps, peak_upload_bps FROM daily_usage ORDER BY "date" DESC')
+                rows = cur.fetchall()
+            lines = ["Date,Download_Bytes,Download_Formatted,Upload_Bytes,Upload_Formatted,Total_Bytes,Total_Formatted,Peak_Download_bps,Peak_Download_Formatted,Peak_Upload_bps,Peak_Upload_Formatted\r\n"]
+            for r in rows:
+                lines.append(f'{r[0]},{r[1]},{format_bytes(r[1])},{r[2]},{format_bytes(r[2])},{r[3]},{format_bytes(r[3])},{r[4]},{format_bps(r[4])},{r[5]},{format_bps(r[5])}\r\n')
+            self.wfile.write("".join(lines).encode("utf-8"))
+            return
+
+        # CSV Export: Downtimes History
+        if parsed.path == "/api/telemetry/export/downtimes.csv":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="modem_downtimes.csv"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            with get_db() as (conn, cur):
+                cur.execute('SELECT id, start_ts, end_ts, duration_sec FROM downtime_history ORDER BY start_ts DESC FETCH FIRST 500 ROWS ONLY')
+                rows = cur.fetchall()
+            lines = ["ID,Start_Timestamp,End_Timestamp,Start_IST,End_IST,Duration_Seconds,Duration_Formatted\r\n"]
+            for r in rows:
+                s_ist = datetime.datetime.fromtimestamp(r[1], tz=IST_TZ).strftime("%Y-%m-%d %H:%M:%S") if r[1] else "--"
+                e_ist = datetime.datetime.fromtimestamp(r[2], tz=IST_TZ).strftime("%Y-%m-%d %H:%M:%S") if r[2] else "--"
+                d_str = format_duration(r[3]) if r[3] else "Active"
+                lines.append(f'{r[0]},{r[1]},{r[2] or ""},{s_ist},{e_ist},{r[3] or 0},{d_str}\r\n')
+            self.wfile.write("".join(lines).encode("utf-8"))
+            return
+
+        # CSV Export: Tower History
+        if parsed.path == "/api/telemetry/export/towers.csv":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="modem_towers.csv"')
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            with get_db() as (conn, cur):
+                cur.execute('SELECT enb, cid, lac, band, channel, count, best_sinr, best_rsrp, first_seen, last_seen FROM tower_history ORDER BY count DESC')
+                rows = cur.fetchall()
+            lines = ["eNB,CID,LAC,Band,Channel,Sample_Count,Best_SINR_dB,Best_RSRP_dBm,First_Seen_IST,Last_Seen_IST\r\n"]
+            for r in rows:
+                fs_ist = datetime.datetime.fromtimestamp(r[8], tz=IST_TZ).strftime("%Y-%m-%d %H:%M:%S") if r[8] else "--"
+                ls_ist = datetime.datetime.fromtimestamp(r[9], tz=IST_TZ).strftime("%Y-%m-%d %H:%M:%S") if r[9] else "--"
+                lines.append(f'"{r[0]}","{r[1]}","{r[2]}","{r[3]}","{r[4]}",{r[5]},{r[6]},{r[7]},{fs_ist},{ls_ist}\r\n')
+            self.wfile.write("".join(lines).encode("utf-8"))
+            return
+
         # Telemetry Network Insights API
         if parsed.path == "/api/telemetry/insights":
             insights = get_network_insights()
@@ -2865,6 +3020,10 @@ def run():
     # Start 15-minute periodic summary notification worker
     summary_thread = threading.Thread(target=periodic_summary_worker, daemon=True)
     summary_thread.start()
+
+    # Start midnight daily digest worker
+    midnight_digest = threading.Thread(target=midnight_digest_worker, daemon=True)
+    midnight_digest.start()
 
     socketserver.ThreadingTCPServer.allow_reuse_address = True
     with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), TelemetryHandler) as httpd:
