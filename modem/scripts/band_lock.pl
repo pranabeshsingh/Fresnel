@@ -31,6 +31,7 @@ my $token = $params{token} || "";
 $token =~ s/[^a-fA-F0-9]//g;
 my $action = $params{action} || "get_mode";
 my $mode = $params{mode} || "";
+$mode =~ s/[^a-z0-9_]//gi;  # Sanitize: only alphanumeric+underscore allowed in JSON output
 
 print "Content-type: application/json\n";
 print "Cache-Control: no-cache\n\n";

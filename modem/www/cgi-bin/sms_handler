@@ -108,6 +108,7 @@ if ($action eq "send") {
     my $num = $params{'number'} || "";
     my $txt = $params{'text'} || "";
     $num =~ s/[^0-9+]//g;
+    $txt =~ s/\x1A//g;  # Strip embedded SUB chars that would prematurely terminate AT+CMGS
     
     if (!$num || !$txt) {
         print '{"status":"error","message":"Invalid recipient or message"}';
