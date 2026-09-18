@@ -200,7 +200,7 @@ def seed_peak_speeds():
                     peak_dl_today_bps = int(row[0] or 0)
                     peak_ul_today_bps = int(row[1] or 0)
 
-            cur.execute('SELECT "date", peak_download_bps FROM daily_usage WHERE peak_download_bps IS NOT NULL AND peak_download_bps <= 2500000000 ORDER BY peak_download_bps DESC FETCH FIRST 1 ROWS ONLY')
+            cur.execute('SELECT "date", peak_download_bps FROM daily_usage WHERE peak_download_bps IS NOT NULL AND peak_download_bps <= 1000000000 ORDER BY peak_download_bps DESC FETCH FIRST 1 ROWS ONLY')
             row_dl = cur.fetchone()
             if row_dl and row_dl[1]:
                 with peaks_lock:
@@ -210,7 +210,7 @@ def seed_peak_speeds():
                     except Exception:
                         peak_dl_lifetime_ts = now
 
-            cur.execute('SELECT "date", peak_upload_bps FROM daily_usage WHERE peak_upload_bps IS NOT NULL AND peak_upload_bps <= 2500000000 ORDER BY peak_upload_bps DESC FETCH FIRST 1 ROWS ONLY')
+            cur.execute('SELECT "date", peak_upload_bps FROM daily_usage WHERE peak_upload_bps IS NOT NULL AND peak_upload_bps <= 1000000000 ORDER BY peak_upload_bps DESC FETCH FIRST 1 ROWS ONLY')
             row_ul = cur.fetchone()
             if row_ul and row_ul[1]:
                 with peaks_lock:
@@ -1486,8 +1486,8 @@ def record_telemetry(data, client_ip=""):
         dl_bps_val = int(float(speed_data.get("download_bps", 0) or 0))
         ul_bps_val = int(float(speed_data.get("upload_bps", 0) or 0))
         
-        # Hardware PHY rate sanity clamp (SDX55 Gigabit/USB3 interface ceiling: 2.5 Gbps)
-        MAX_PHY_BPS = 2_500_000_000
+        # Hardware PHY rate sanity clamp (Gigabit interface ceiling: 1.0 Gbps)
+        MAX_PHY_BPS = 1_000_000_000
         if dl_bps_val > MAX_PHY_BPS:
             dl_bps_val = min(max(0, dl_bps_val - 4294967296 if dl_bps_val >= 4294967296 else 0), MAX_PHY_BPS)
         if ul_bps_val > MAX_PHY_BPS:
@@ -2031,6 +2031,9 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
 
         self.send_response(404)
         self.end_headers()
+
+    def do_HEAD(self):
+        self.do_GET()
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
