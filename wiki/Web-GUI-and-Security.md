@@ -24,6 +24,18 @@ The web interface is hosted directly by the modem's lightweight `httpd` server o
    - Execute balance check and recharge USSD codes (e.g., `*121#`).
 6. **Multi-Sensor Thermal Monitor**:
    - Real-time thermal sensors covering baseband DSP, RF transceiver, PA (Power Amplifiers), and board thermistors.
+7. **Intelligence & Insights Analytics Suite (Cloud Dashboard)**:
+   - **Composite RF Link Quality Index**: Real-time 0–100% composite score and letter grade (A+ through F) diagnosing signal health, RSRP, SINR, RSRQ, and channel limitation factors.
+   - **Timing Advance & Spectrum Card**: Distance-to-cell-tower estimate ($d \approx \text{TA} \times 78.12\text{ m}$), channel bandwidth, frequency, duplex mode, and distance station calibration.
+   - **Top Speeds Record Tracking**: Real-time badges for Today's and Lifetime peak download/upload bitrates.
+   - **Ping Jitter & Bufferbloat Benchmark**: Interactive loaded latency testing against VPS, Cloudflare, and Google DNS.
+   - **24-Hour Speed Congestion Profile**: Predicts peak congestion hours and off-peak optimal download windows.
+   - **Rolling SLA Availability & MTBF**: 24-hour, 7-day, and 30-day uptime reliability scorecards.
+8. **Field Deployment & Diagnostic Tools**:
+   - **Antenna Alignment Audio Pitch Beeper**: Pure Web Audio API tone generator where frequency and beep pulse rate scale dynamically with live SINR/RSRP for heads-up antenna alignment without looking at a screen.
+   - **Cell Tower Vector & Location Map**: Interactive Leaflet + OpenStreetMap vector map showing modem position, tower azimuth direction vector, distance circle, and cell info popup.
+   - **Progressive Web App (PWA)**: Standalone mobile/desktop app installability with offline service worker caching (`sw.js`).
+   - **CSV Data Exports**: One-click exports for Daily Bandwidth Usage, Downtimes History, and Cell Tower History.
 
 ---
 

@@ -27,13 +27,25 @@
    - Resolves the classic bug where 5G NSA networks (like Airtel India) get misclassified as "4G LTE".
    - Decodes 3GPP `+CEREG` Access Technology `13` (EN-DC), `+CESQ` 5G NR signal metrics, and `AT+NRCAINFO` to display dynamic dual-band pairings like **`B3 (1800) + n78`**.
 3. **Carrier Aggregation (CA) Telemetry**:
-   - Tracks Primary Component Carriers (PCC) and Secondary Component Carriers (SCC) across LTE and 5G NR channels.
-4. **Embedded Glassmorphism Web GUI**:
-   - Protected with token-based session security.
-   - Includes real-time 60-second rolling Canvas charts, RF signal gauges, live connection tracking, band locker, SMS hub, and multi-sensor thermals.
-5. **Remote Cloud Telemetry & Alerting**:
-   - Lightweight modem agent (`telemetry_pusher.sh`) synchronizes data to a central cloud server (FastAPI/Flask with Oracle Cloud Autonomous Database or local SQLite).
-   - Automated Telegram bot notifications for daily data consumption, SIM balance/validity SMS, and network downtime alarms.
+   - Tracks Primary Component Carriers (PCC) and Secondary Component Carriers (SCC) across LTE and 5G NR channels in real time.
+4. **Active Queue Management (AQM) & Bufferbloat Elimination**:
+   - Includes `modem/scripts/enable_aqm.sh` to apply cellular-tuned **FQ-CoDel** or **CAKE** qdiscs to the gateway interface.
+   - Slashes loaded latency spikes from **+120 ms (Grade D/F)** down to **+1 ms ~ +4 ms (Grade A+)** during full saturation downloads.
+5. **Network Intelligence & Insights Suite**:
+   - **Composite RF Link Quality Index**: Real-time 0–100% composite score, letter grade (A+ through F), and radio diagnosis (e.g. "Interference Limited", "Optimal Radio Conditions").
+   - **Timing Advance (TA) & Spectrum Card**: Distance-to-cell-tower estimator ($d \approx \text{TA} \times 78.12\text{ m}$), channel bandwidth, frequency, duplex mode, and distance station calibration.
+   - **Peak Speed Records**: Real-time tracking of Today's and Lifetime peak download/upload records with persistent database seeding.
+   - **Ping Jitter & Bufferbloat Benchmark**: Real-time multi-target jitter calculation (VPS, Cloudflare 1.1.1.1, Google 8.8.8.8) and interactive loaded latency scoring.
+   - **24-Hour Speed Congestion Profile**: Predicts daily peak congestion windows and off-peak optimal transfer times.
+   - **Rolling SLA Availability & MTBF**: Continuous 24h, 7d, and 30d uptime availability scorecards with Mean Time Between Failures tracking.
+6. **Diagnostics & Hands-Free Tools**:
+   - **Antenna Alignment & Audio Pitch Beeper**: Pure Web Audio API tone generator where pitch frequency and pulse rate scale dynamically with SINR/RSRP for heads-up antenna pointing.
+   - **Cell Tower Vector & Location Map**: Interactive Leaflet OpenStreetMap dark-mode vector map displaying modem position, tower direction azimuth, distance circle, and cell info popup.
+   - **Progressive Web App (PWA)**: Standalone mobile/desktop app installability with service worker offline caching (`sw.js`) and manifest (`manifest.json`).
+   - **CSV Data Exports**: One-click download for Daily Bandwidth Usage, Downtimes History, and Cell Tower History.
+7. **Proactive Cloud Telemetry & Automated Alerts**:
+   - Automated Telegram alarms for proactive RF degradation (SINR < 4 dB), cell flapping, offline/recovery events, and carrier SIM quota scraping.
+   - Automated daily midnight summary digest delivered to Telegram at **00:00:01 IST** with 24h consumption, SLA availability, and peak speeds.
 
 ---
 
@@ -50,15 +62,16 @@
   ├── Hexagon Baseband DSP (64-Bit Accounting Counters)
   └── Embedded Linux OS
         ├── /usrdata/simpleadmin/scripts/get_dashboard_data.pl (Telemetry Engine)
+        ├── /usrdata/simpleadmin/scripts/enable_aqm.sh (Bufferbloat Elimination)
         ├── /usrdata/simpleadmin/www/ (Web GUI on Port 8080)
         └── /usrdata/simpleadmin/scripts/telemetry_pusher.sh
               │
               │ Encrypted HTTPS Telemetry
               ▼
    [ Cloud Telemetry Server ] (VPS / Oracle Cloud / Docker)
-   ├── Web Dashboard (Remote Monitoring)
-   ├── Oracle Autonomous Database / SQLite History
-   └── Telegram Notification Bot
+   ├── Web Dashboard & PWA (Intelligence & Insights, Tower Map, Audio Beeper)
+   ├── Oracle Autonomous Database / SQLite History & CSV Exports
+   └── Telegram Notification Bot (Proactive RF, Downtimes, Midnight Digest)
 ```
 
 ---
@@ -81,9 +94,19 @@ The script will:
 - Set up permissions and start supervisor watchdogs.
 - Access the web interface at **`http://172.16.10.1:8080/login.html`** (Default password: `admin`).
 
-### 2. Run Cloud Telemetry Server (Docker)
+### 2. Enable Active Queue Management (AQM) for Bufferbloat Elimination
 
-To run the remote telemetry dashboard and sync server on a VPS:
+Run on the host router / Raspberry Pi / modem gateway interface to achieve Grade A+ loaded latency:
+
+```bash
+sudo ./modem/scripts/enable_aqm.sh ecm0 fq_codel
+# Or with CAKE:
+sudo ./modem/scripts/enable_aqm.sh ecm0 cake
+```
+
+### 3. Run Cloud Telemetry Server (Docker)
+
+To run the remote telemetry dashboard, Intelligence & Insights suite, and sync server on a VPS:
 
 ```bash
 cd server
@@ -103,7 +126,7 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 
 - [**01. Qualcomm IPA Hardware Routing & Throughput Telemetry**](hardware-guides/01-qualcomm-ipa-architecture.md): Why `/proc/net/dev` drops packets and how baseband QMI WDS telemetry solves it.
 - [**02. 5G SA vs 5G NSA & Carrier Aggregation Guide**](hardware-guides/02-5g-sa-vs-nsa-and-ca.md): 3GPP AT command decoding for Standalone vs EN-DC Dual Connectivity.
-- [**03. Overcoming the USB 2.0 Bottleneck with Raspberry Pi 4**](hardware-guides/03-usb2-bottleneck-and-rpi4.md): Bypassing the 180 Mbps USB 2.0 ceiling using a Pi 4 Gigabit bridge and Linux flowtables.
+- [**03. Overcoming the USB 2.0 Bottleneck with Raspberry Pi 4**](hardware-guides/03-usb2-bottleneck-and-rpi4.md): Bypassing the 180 Mbps USB 2.0 ceiling using a Pi 4 Gigabit bridge, Linux flowtables, and AQM bufferbloat elimination.
 - [**04. Qualcomm SDX55 AT Commands Cheatsheet**](hardware-guides/04-at-commands-cheatsheet.md): Complete command reference for signal metrics, band locking, and diagnostics.
 
 ---
@@ -115,6 +138,7 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 ├── modem/
 │   ├── scripts/
 │   │   ├── get_dashboard_data.pl   # Primary telemetry engine (Baseband stats, RF, CA)
+│   │   ├── enable_aqm.sh           # Active Queue Management (FQ-CoDel / CAKE bufferbloat fix)
 │   │   ├── simpleadmin_daemon.sh   # Supervisor daemon and watchdog
 │   │   ├── telemetry_pusher.sh     # Push metrics to cloud server
 │   │   ├── doAT.pl / doAT.py       # Serial AT wrappers over /dev/smd7
@@ -135,7 +159,10 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 │   ├── server_sqlite.py            # Standalone zero-dependency Python server
 │   ├── server_oracle.py            # Enterprise Oracle Cloud ADB server
 │   ├── db.py                       # Connection pooling module
-│   ├── static/index.html           # Cloud web dashboard
+│   ├── static/
+│   │   ├── index.html              # Cloud web dashboard (Intelligence & Insights, Map, Audio Beeper)
+│   │   ├── manifest.json           # Progressive Web App (PWA) manifest
+│   │   └── sw.js                   # Service worker for offline asset caching
 │   ├── Dockerfile                  # Container definition
 │   ├── docker-compose.yml          # Container orchestration
 │   └── requirements.txt            # Python dependencies

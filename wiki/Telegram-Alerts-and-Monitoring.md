@@ -48,8 +48,10 @@ To enable Telegram alerts, you need two credentials:
 ├──────────────────────────────────────────────────────────┤
 │ 🚨 Modem Offline Warning (Heartbeat lost > 5m)           │
 │ ✅ Modem Recovered (Back online, band n78, RSRP -85dBm)  │
-│ 📊 Periodic 15m / Daily Consumption Digest (GB used)     │
-│ ✉️ Carrier SIM Alert (Daily balance & plan validity)    │
+│ 📉 Proactive RF Degradation (SINR < 4 dB warning)        │
+│ 🔄 Cell Flapping Alarms (Rapid eNB/CID handoff churn)    │
+│ 🌙 Automated Midnight Daily Digest (00:00:01 IST)        │
+│ ✉️ Real-Time Carrier SMS & OTP Instant Forwarding        │
 │ 🌡️ Overheating Warning (Baseband DSP > 75°C)             │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -61,19 +63,28 @@ To enable Telegram alerts, you need two credentials:
   > *Device `SG500M2-X` (IMEI 8600...) has stopped transmitting telemetry.*
 - Upon reconnection, a recovery alert summarizes downtime duration and re-attached RF metrics.
 
-### 2. Daily Data Consumption Digest
-- Summarizes total upload and download traffic over the previous 24 hours.
-- Computes wire-speed accounting derived from Qualcomm IPA hardware registers.
+### 2. Proactive RF Degradation & Signal Flapping Alarms
+- **RF Degradation Warning**: If the cellular Signal-to-Interference-plus-Noise Ratio (SINR) falls below **4 dB** for consecutive samples, a warning is dispatched before connection collapse:
+  > 📉 **Radio Link Degradation Warning**  
+  > *SINR has degraded to `2.4 dB` on serving cell `n78` (PCI 412). Radio conditions are interference-limited.*
+- **Cell Flapping Alert**: Detects rapid ping-pong cell handoffs across multiple towers (`eNB` / `CID`) within short time windows, indicating borderline coverage or antenna misalignment.
 
-### 3. SIM Validity & Quota Scraper
-- Automatically parses incoming carrier SMS messages forwarded by the modem:
-  - Scrapes remaining high-speed data quota.
-  - Alerts on upcoming plan expiry dates (e.g., 3 days and 1 day before expiration).
+### 3. Automated Midnight Daily Summary Digest
+Every midnight at **00:00:01 IST**, the background worker thread compiles the past 24-hour cycle and transmits a formatted digest:
+- **Daily Traffic**: Total Downloaded (GB) and Uploaded (GB) with wire-speed precision.
+- **SLA Uptime**: Rolling 24-hour availability percentage (e.g. `99.98%`) and recorded outage counts.
+- **Speed Records**: Today's peak download and upload bitrates.
+- **RF Health Summary**: Average RSRP, SINR, and serving primary band.
 
-### 4. Thermal & RF Quality Thresholds
-- Triggers notifications if baseband DSP temperature exceeds 75°C or PA thermistors exceed 85°C.
-- Alerts if SINR drops below 0 dB for sustained intervals, indicating severe radio interference or antenna misalignment.
+### 4. SIM Validity & Carrier SMS Forwarding
+- **Defensive Decoding**: Ingests both plain-text and hex-encoded SMS messages directly from baseband memory without corruption.
+- **Instant Forwarding**: Carrier text messages, recharge receipts, and authentication OTPs are forwarded to Telegram instantly.
+- **Quota Tracking**: Automatically scrapes remaining high-speed daily/monthly quota and warns 3 days and 1 day before plan expiration.
+
+### 5. Thermal Alarms
+- Triggers notifications if baseband DSP temperature exceeds 75°C or PA thermistors exceed 85°C, advising on fan ventilation or heatsink checks.
 
 ---
 
 Next Step: Learn how to troubleshoot errors and recover modems in [Troubleshooting & Recovery](Troubleshooting-and-Recovery).
+

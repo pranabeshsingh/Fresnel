@@ -118,4 +118,25 @@ Located at `/usrdata/simpleadmin/scripts/telemetry_pusher.sh`, this lightweight 
 
 ---
 
+## 6. Active Queue Management Optimizer: `enable_aqm.sh`
+
+Located at `/usrdata/simpleadmin/scripts/enable_aqm.sh`, this script eliminates cellular bufferbloat on Qualcomm pass-through host interfaces:
+
+### Operational Mechanics:
+- **FQ-CoDel Mode (Default)**:
+  - Replaces default FIFO queue with Fair Queueing Controlled Delay.
+  - Cellular-tuned parameters: `target 5ms interval 100ms ecn`.
+  - Distributes bandwidth evenly across flows, ensuring gaming and DNS packets jump ahead of heavy multi-stream HTTP/torrent downloads.
+- **CAKE Mode**:
+  - Applies Common Applications Kept Enhanced with `diffserv4` QoS prioritization, Ethernet framing accounting, and packet washing.
+- **Syntax**:
+  ```bash
+  # Syntax: ./enable_aqm.sh <interface_name> [fq_codel|cake]
+  sudo ./enable_aqm.sh ecm0 fq_codel
+  sudo ./enable_aqm.sh usb0 cake
+  ```
+
+---
+
 Next Step: Configure the remote cloud monitoring platform in [Cloud Telemetry Server Setup](Cloud-Telemetry-Server-Setup).
+
