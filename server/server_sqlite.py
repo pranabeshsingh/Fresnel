@@ -686,7 +686,7 @@ def record_telemetry(data, client_ip=""):
     with health_lock:
         prev_status = modem_online_status
         last_heartbeat_ts = now
-        if prev_status == "offline":
+        if prev_status == "offline" or current_downtime_id is not None:
             modem_online_status = "online"
             duration = now - (offline_since_ts or now)
             duration_str = format_duration(duration)
@@ -705,6 +705,25 @@ def record_telemetry(data, client_ip=""):
             offline_since_ts = None
             log_alert("modem_online", "info", "Modem Restored Online", f"Modem reconnected. Downtime recorded: {duration_str}.")
             broadcast_sse({"type": "modem_status", "status": "online", "downtime": duration, "downtime_str": duration_str})
+
+        # Safeguard: Auto-heal any dangling unclosed downtimes in DB if modem is actively pushing data
+        try:
+            conn_dt = db_connect()
+            cur_dt = conn_dt.cursor()
+            cur_dt.execute("SELECT id, start_ts FROM downtime_history WHERE end_ts IS NULL")
+            open_downtimes = cur_dt.fetchall()
+            if open_downtimes:
+                for dt_id, dt_start in open_downtimes:
+                    cur_dt.execute("SELECT MIN(timestamp) FROM telemetry WHERE timestamp >= ?", (dt_start,))
+                    res_t = cur_dt.fetchone()
+                    reconnect_ts = res_t[0] if (res_t and res_t[0]) else now
+                    d_sec = max(1, reconnect_ts - dt_start)
+                    cur_dt.execute("UPDATE downtime_history SET end_ts = ?, duration_sec = ? WHERE id = ?",
+                                   (reconnect_ts, d_sec, dt_id))
+                conn_dt.commit()
+            conn_dt.close()
+        except Exception as e:
+            print("Auto-heal open downtimes error:", e)
 
     conn = db_connect()
     cur = conn.cursor()
