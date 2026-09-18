@@ -70,7 +70,7 @@ All user dashboard endpoints are secured via authenticated session cookies (`Htt
 - **`POST /api/auth/login`**:
   - Request body: `{"password": "<DASHBOARD_PASSWORD>"}`
   - Response: `200 OK` with `{"status": "ok", "token": "<SESSION_TOKEN>"}` and `Set-Cookie: auth_token=<SESSION_TOKEN>; Path=/; SameSite=Strict; HttpOnly; Secure`
-  - Eliminates cleartext credential storage by issuing a cryptographically derived SHA-256 session token stored in an `HttpOnly` browser cookie.
+  - Eliminates cleartext credential storage by issuing a cryptographically derived PBKDF2-HMAC-SHA256 session token stored in an `HttpOnly` browser cookie.
 - **`POST /api/auth/logout`**:
   - Invalidates the active session and expires the cookie (`Max-Age=0`).
 

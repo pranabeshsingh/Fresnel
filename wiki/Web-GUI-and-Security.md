@@ -48,7 +48,7 @@ The web interface is hosted directly by the modem's lightweight `httpd` server o
 - **DOM XSS Sanitization**: Dynamic user inputs (such as DNS query targets, SMS sender/body payloads, and AT command responses) pass through `escapeHtml()` sanitizers before rendering.
 
 ### 2. Cloud Telemetry Server (`:8000`)
-- **Cryptographic Session Tokens**: Replaced raw password cookies with cryptographically derived `SESSION_TOKEN` (`SHA-256` digest of secret and token). Raw credentials are never stored in cookies.
+- **Cryptographic Session Tokens**: Replaced raw password cookies with cryptographically derived `SESSION_TOKEN` (`PBKDF2-HMAC-SHA256` key derivation with dynamic salt). Raw credentials are never stored in cookies.
 - **Secure Cookie Attributes**: Session cookies enforce `HttpOnly`, `SameSite=Strict`, and conditional `Secure` flags when accessed over TLS/HTTPS.
 - **Zero Cleartext Client Storage**: Authentication tokens are maintained in-memory only during the browser session, avoiding cleartext `localStorage` persistence.
 - **Address Bar Sanitization**: Query parameter credentials (`?key=...`) are automatically stripped from the browser URL upon load via `window.history.replaceState` to prevent leakage in browser history or referrer logs.

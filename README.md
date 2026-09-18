@@ -185,7 +185,7 @@ Access the cloud dashboard at **`http://<your-vps-ip>:8000`**.
 ## 🔒 Security & Privacy
 
 The codebase adheres to strict security standards (CodeQL verified):
-- **Zero Cleartext Credentials**: The web dashboard relies on cryptographically derived session tokens (`SHA-256`) and secure `HttpOnly; SameSite=Strict` cookies. Passwords and keys are never stored in browser `localStorage`.
+- **Zero Cleartext Credentials**: The web dashboard relies on cryptographically derived session tokens (`PBKDF2-HMAC-SHA256`) and secure `HttpOnly; SameSite=Strict` cookies. Passwords and keys are never stored in browser `localStorage`.
 - **XSS & Injection Protection**: Modem and server interfaces sanitize all dynamic inputs, SMS payloads, and DNS diagnostics.
 - **Firewall & Isolation**: `firewall_security.sh` drops cellular WAN ingress, preventing remote exploitation of local diagnostic interfaces.
 - **Vulnerability Reporting**: Please consult [SECURITY.md](SECURITY.md) for confidential disclosure instructions.

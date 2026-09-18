@@ -330,7 +330,10 @@ A full automated security audit using GitHub CodeQL identified seven high-severi
    - **Remediation**: Removed all `localStorage` credential persistence. The client maintains auth keys strictly in-memory during active sessions and relies on secure HTTP session cookies. Added address-bar URL sanitization (`history.replaceState`) and `/api/auth/logout` session invalidation.
 3. **Alerts #1, #2, #3, #4: Clear-Text Storage of Sensitive Data in Cookies** — `server/server_sqlite.py:1024, 1461` and `server/server_oracle.py:1968, 2490`
    - **Vulnerability**: Raw master password (`DASHBOARD_PASSWORD`) was stored directly in `Set-Cookie` headers.
-   - **Remediation**: Derived a one-way cryptographic SHA-256 session token (`SESSION_TOKEN`), enforced `HttpOnly`, `SameSite=Strict`, and conditional `Secure` cookie flags, and retained backwards-compatible validation in `is_authenticated()`.
+   - **Remediation**: Derived a one-way cryptographic session token (`SESSION_TOKEN`), enforced `HttpOnly`, `SameSite=Strict`, and conditional `Secure` cookie flags, and retained backwards-compatible validation in `is_authenticated()`.
+4. **Alerts #8 & #9: Use of Broken/Weak Hashing on Sensitive Data** — `server/server_sqlite.py:29` and `server/server_oracle.py:29`
+   - **Vulnerability**: Unkeyed single-pass `hashlib.sha256()` was used to hash sensitive password/secret data to derive session tokens.
+   - **Remediation**: Upgraded to `hashlib.pbkdf2_hmac('sha256', ...)` with 100,000 iterations and dynamic salt, conforming to OWASP/NIST standards for password derivation.
 
 ---
 

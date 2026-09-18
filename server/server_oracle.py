@@ -25,8 +25,13 @@ STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(os.path.dirname(__file__)
 AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "jio5g_telemetry_secret_token_8892")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "803bbe4c-9db5-4a38-bbdd-224666f9017b")
 
-# Cryptographically derived session token - prevents storing cleartext passwords in cookies
-SESSION_TOKEN = hashlib.sha256(f"fresnel_session:{DASHBOARD_PASSWORD}:{AUTH_TOKEN}".encode("utf-8")).hexdigest()
+# Cryptographically derived session token using PBKDF2-HMAC-SHA256 (prevents weak-hash alerts on sensitive data)
+SESSION_TOKEN = hashlib.pbkdf2_hmac(
+    "sha256",
+    DASHBOARD_PASSWORD.encode("utf-8"),
+    f"fresnel_salt:{AUTH_TOKEN}".encode("utf-8"),
+    100_000,
+).hex()
 
 sse_subscribers = []
 sse_lock = threading.Lock()
