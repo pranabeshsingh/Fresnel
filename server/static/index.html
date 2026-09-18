@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
-    <title>Fresnel • Cloud Telemetry</title>
+    <title>Fresnel • 5G Modem Cloud Hub</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📡</text></svg>">
     <script src="/chart.umd.min.js"></script>
     <script>
-        if (typeof Chart === 'undefined') {
-            document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
+        if (typeof Chart === "undefined") {
+            document.write("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"><\/script>");
         }
     </script>
     <style>
@@ -147,7 +147,50 @@
         .tab-content.active { display: block; }
 
         /* KPI Cards Grid */
-        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        /* KPI Cards Grid - Symmetrical 3x2 on desktop */
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        
+        /* Hero Network Identity Strip */
+        .hero-network-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 18px;
+            margin-bottom: 16px;
+            background: rgba(18, 24, 38, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .hero-net-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-kill-sm {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-kill-sm:hover:not(:disabled) {
+            background: #ef4444;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+        .btn-kill-sm:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
         .glass-card {
             background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-card);
             border-radius: 14px; padding: 16px; transition: transform 0.2s ease, border-color 0.2s ease;
@@ -182,7 +225,15 @@
 
         /* Tables Grid Side-by-Side */
         .tables-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 18px; }
-        @media (max-width: 1024px) { .tables-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 1024px) { 
+            .tables-grid { grid-template-columns: 1fr !important; } 
+        }
+        .sms-table td {
+            white-space: normal !important;
+            word-break: break-word;
+            vertical-align: middle;
+            line-height: 1.5;
+        }
 
         .table-card { background: var(--bg-card); backdrop-filter: blur(16px); border: 1px solid var(--border-card); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; }
         .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -278,8 +329,8 @@
             <div class="brand">
                 <div class="brand-logo">📡</div>
                 <div class="brand-title">
-                    <h1 id="hdr-title">Fresnel • Cloud Telemetry</h1>
-                    <p><span id="hdr-model">Fresnel Gateway</span> • <span id="hdr-carrier">Detecting Carrier...</span> • <span id="hdr-uptime" style="color: #38bdf8; font-weight: 600;">Uptime: --</span></p>
+                    <h1 id="hdr-title">5G Modem • Cloud Hub</h1>
+                    <p><span id="hdr-model">5G Modem</span> • <span id="hdr-carrier">Detecting Carrier...</span> • <span id="hdr-uptime" style="color: #38bdf8; font-weight: 600;">Uptime: --</span></p>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
                         <span>📡 Modem → VPS: <b id="hdr-modem-sync" style="color: #34d399; font-family: var(--font-mono);">--</b></span>
                         <span>💻 VPS → Browser: <b id="hdr-client-sync" style="color: #38bdf8; font-family: var(--font-mono);">--</b></span>
@@ -303,6 +354,7 @@
         <!-- Navigation Tabs -->
         <div class="tabs-nav">
             <button class="tab-btn active" onclick="switchTab('telemetry')">📊 Telemetry & KPIs</button>
+            <button class="tab-btn" onclick="switchTab('insights')">🧠 Intelligence & Insights</button>
             <button class="tab-btn" onclick="switchTab('dns')">🛡️ DNS & Ad-Block</button>
             <button class="tab-btn" onclick="switchTab('console')">⚡ AT Console & Band Locker</button>
             <button class="tab-btn" onclick="switchTab('sms')">💬 Cloud SMS & USSD</button>
@@ -318,8 +370,32 @@
                 <div id="vps-sim-alert-actions" style="display: flex; gap: 8px;"></div>
             </div>
 
-            <!-- KPI Cards Grid -->
+            <!-- Hero Network Identity Strip -->
+            <div class="hero-network-strip" id="hero-network-strip">
+                <div class="hero-net-group">
+                    <span style="font-weight: 600; color: var(--text-muted);">🌐 Public IP:</span>
+                    <span id="kpi-public-ip" style="font-weight: 700; color: #38bdf8; font-family: var(--font-mono);">--</span>
+                    <span class="card-badge purple" id="kpi-ip-type" style="margin: 0; padding: 2px 7px; font-size: 10px;">--</span>
+                </div>
+                <div class="hero-net-group">
+                    <span style="color: var(--text-muted);">Carrier:</span>
+                    <span id="kpi-carrier-name" style="font-weight: 600; color: #34d399;">--</span>
+                    <span style="color: rgba(255,255,255,0.15);">•</span>
+                    <span style="color: var(--text-muted);">Interface:</span>
+                    <span id="kpi-interface" style="font-weight: 600; color: #38bdf8;">--</span>
+                </div>
+                <div class="hero-net-group">
+                    <span style="color: var(--text-muted);">Tower / Cell:</span>
+                    <span id="hero-tower-cell" style="font-weight: 600; color: #c084fc;">--</span>
+                    <span style="color: rgba(255,255,255,0.15);">•</span>
+                    <span style="color: var(--text-muted);">APN:</span>
+                    <span id="hero-apn" style="font-weight: 600; color: var(--text-main);">jionet</span>
+                </div>
+            </div>
+
+            <!-- Perfectly Balanced 6-Card KPI Grid (3x2 Desktop) -->
             <div class="cards-grid">
+                <!-- Row 1, Card 1: 5G Signal -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">📶 5G SA Signal</span>
@@ -333,18 +409,7 @@
                     </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="card-header">
-                        <span class="card-lbl">🌐 Active Public IP</span>
-                        <span class="card-badge purple" id="kpi-ip-type">--</span>
-                    </div>
-                    <div class="card-val" id="kpi-public-ip" style="font-size: 14px; font-weight: 700; color: #38bdf8; padding-top: 4px;">--</div>
-                    <div class="card-sub" style="margin-top: 6px;">
-                        <span>Carrier: <b id="kpi-carrier-name">--</b></span>
-                        <span>Interface: <b id="kpi-interface">--</b></span>
-                    </div>
-                </div>
-
+                <!-- Row 1, Card 2: Live Throughput -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">⚡ Live Throughput</span>
@@ -355,8 +420,25 @@
                         <span>Upload: <b id="kpi-speed-ul" style="color: #34d399;">--</b></span>
                         <span>Band: <b id="kpi-band">--</b></span>
                     </div>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-muted); display: flex; align-items: center; gap: 4px;">🎯 Today Peak:</span>
+                            <span style="font-weight: 600; font-family: var(--font-mono);">
+                                <span style="color: #38bdf8;">↓ <span id="kpi-peak-today-dl">--</span></span> &nbsp;
+                                <span style="color: #34d399;">↑ <span id="kpi-peak-today-ul">--</span></span>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="color: var(--text-muted); display: flex; align-items: center; gap: 4px;">🏆 All-Time Record:</span>
+                            <span style="font-weight: 600; font-family: var(--font-mono);">
+                                <span style="color: #a78bfa;" title="Lifetime DL Record">↓ <span id="kpi-peak-life-dl">--</span></span> &nbsp;
+                                <span style="color: #f472b6;" title="Lifetime UL Record">↑ <span id="kpi-peak-life-ul">--</span></span>
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Row 1, Card 3: Data Usage -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">📊 Data Usage</span>
@@ -370,36 +452,7 @@
                     </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="card-header">
-                        <span class="card-lbl">🌡️ Thermals & System</span>
-                        <span class="card-badge" id="kpi-system-health">--</span>
-                    </div>
-                    <div class="card-val" id="kpi-temp-modem">--</div>
-                    <div class="card-sub">
-                        <span>CPU: <b id="kpi-temp-cpu">--</b></span>
-                        <span>Uptime: <b id="kpi-uptime" style="color: #38bdf8;">--</b></span>
-                        <span>RAM: <b id="kpi-ram">--</b></span>
-                    </div>
-                    <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
-                        <span>Modem Sync: <b id="kpi-modem-push" style="color: #34d399;">--</b></span>
-                        <span>Client Sync: <b id="kpi-client-push" style="color: #38bdf8;">--</b></span>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <div class="card-header">
-                        <span class="card-lbl">⚡ Ping & Latency</span>
-                        <span class="card-badge" id="kpi-link-badge">--</span>
-                    </div>
-                    <div class="card-val" id="kpi-ping-vps" style="color: #38bdf8;">--</div>
-                    <div class="card-sub">
-                        <span>Cloudflare: <b id="kpi-ping-cf" style="color: #34d399;">--</b></span>
-                        <span>Google: <b id="kpi-ping-gg" style="color: #f59e0b;">--</b></span>
-                        <span>Host: <b id="kpi-host-ip">--</b></span>
-                    </div>
-                </div>
-
+                <!-- Row 2, Card 4: Active Connections & Ports -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">🔌 Active Connections & Ports</span>
@@ -414,6 +467,38 @@
                     <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
                         <span>Top Flow: <b id="kpi-conn-top-port" style="color: #c084fc;">--</b></span>
                         <span>Modem Ports: <b id="kpi-modem-open-ports" style="color: #34d399;">4 Protected</b></span>
+                    </div>
+                </div>
+
+                <!-- Row 2, Card 5: Ping & Latency -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⏱️ Ping & Latency</span>
+                        <span class="card-badge" id="kpi-link-badge">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-ping-vps" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>Cloudflare: <b id="kpi-ping-cf" style="color: #34d399;">--</b></span>
+                        <span>Google: <b id="kpi-ping-gg" style="color: #f59e0b;">--</b></span>
+                        <span>Host: <b id="kpi-host-ip">--</b></span>
+                    </div>
+                </div>
+
+                <!-- Row 2, Card 6: Thermals & System -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌡️ Thermals & System</span>
+                        <span class="card-badge" id="kpi-system-health">--</span>
+                    </div>
+                    <div class="card-val" id="kpi-temp-modem">--</div>
+                    <div class="card-sub">
+                        <span>CPU: <b id="kpi-temp-cpu">--</b></span>
+                        <span>Uptime: <b id="kpi-uptime" style="color: #38bdf8;">--</b></span>
+                        <span>RAM: <b id="kpi-ram">--</b></span>
+                    </div>
+                    <div class="card-sub" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                        <span>Modem Sync: <b id="kpi-modem-push" style="color: #34d399;">--</b></span>
+                        <span>Client Sync: <b id="kpi-client-push" style="color: #38bdf8;">--</b></span>
                     </div>
                 </div>
             </div>
@@ -676,7 +761,7 @@
                         <div class="table-wrap" style="border: none;">
                             <table style="font-size: 12px;">
                                 <thead>
-                                    <tr><th>Port</th><th>Protocol / Service</th><th>Active Flows</th><th>Share</th></tr>
+                                    <tr><th>Port</th><th>Protocol / Service</th><th>Active Flows</th><th>Share</th><th style="text-align: right;">Action</th></tr>
                                 </thead>
                                 <tbody id="tbl-top-ports-body">
                                     <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 14px;">Awaiting connection telemetry...</td></tr>
@@ -821,7 +906,7 @@
 
         <!-- TAB 3: CLOUD SMS & USSD -->
         <div id="tab-sms" class="tab-content">
-            <div class="tables-grid">
+            <div class="tables-grid" style="grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr); align-items: start;">
                 <!-- SMS Inbox -->
                 <div class="table-card">
                     <div class="table-header">
@@ -829,9 +914,9 @@
                         <span class="pill-badge" id="sms-count-badge">0 Messages</span>
                     </div>
                     <div class="table-wrap">
-                        <table>
+                        <table class="sms-table">
                             <thead>
-                                <tr><th>Sender</th><th>Message</th><th>Received</th><th>Action</th></tr>
+                                <tr><th style="width: 140px;">Sender</th><th>Message</th><th style="width: 160px;">Received</th><th style="width: 80px; text-align: right;">Action</th></tr>
                             </thead>
                             <tbody id="tbl-sms-body">
                                 <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No messages in cloud inbox.</td></tr>
@@ -934,6 +1019,314 @@
                             <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">No backups stored on cloud VPS yet.</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- TAB: NETWORK INTELLIGENCE & INSIGHTS -->
+        <div id="tab-insights" class="tab-content">
+            <!-- Summary Banner -->
+            <div class="glass-card" style="margin-bottom: 20px; border-left: 4px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                    <div>
+                        <div style="font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>🧠</span> 5G Network Intelligence &amp; RF Optimization Suite
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Autonomous Link Quality Evaluation • Bufferbloat Diagnostics • Congestion Forecasting • SLA Tracking
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span class="card-badge green" id="ins-rf-badge" style="font-size: 12px; padding: 4px 10px;">--</span>
+                        <span class="card-badge purple" id="ins-tower-stability-badge" style="font-size: 12px; padding: 4px 10px;">--</span>
+                        <button class="btn-range" onclick="fetchInsights(true)" style="padding: 4px 12px; font-size: 11px; cursor: pointer;">🔄 Refresh Insights</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Peak Speeds & All-Time Records (4 KPI Cards) -->
+            <div style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                <span>⚡</span> Peak Throughput Records
+            </div>
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 20px;">
+                <!-- Today DL Peak -->
+                <div class="glass-card" style="border-top: 2px solid #38bdf8;">
+                    <div class="card-header">
+                        <span class="card-lbl">🎯 Today Peak Download</span>
+                        <span class="card-badge" style="background: rgba(56,189,248,0.15); color: #38bdf8;">00:00 Reset</span>
+                    </div>
+                    <div class="card-val" id="ins-peak-today-dl" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>Top Downlink Today</span>
+                        <span style="color: #38bdf8; font-weight: 600;">24h IST Window</span>
+                    </div>
+                </div>
+
+                <!-- Today UL Peak -->
+                <div class="glass-card" style="border-top: 2px solid #34d399;">
+                    <div class="card-header">
+                        <span class="card-lbl">🎯 Today Peak Upload</span>
+                        <span class="card-badge green">00:00 Reset</span>
+                    </div>
+                    <div class="card-val" id="ins-peak-today-ul" style="color: #34d399;">--</div>
+                    <div class="card-sub">
+                        <span>Top Uplink Today</span>
+                        <span style="color: #34d399; font-weight: 600;">24h IST Window</span>
+                    </div>
+                </div>
+
+                <!-- Lifetime DL Peak -->
+                <div class="glass-card" style="border-top: 2px solid #a78bfa;">
+                    <div class="card-header">
+                        <span class="card-lbl">🏆 Lifetime Download Record</span>
+                        <span class="card-badge purple">All-Time</span>
+                    </div>
+                    <div class="card-val" id="ins-peak-life-dl" style="color: #a78bfa;">--</div>
+                    <div class="card-sub">
+                        <span>Achieved: <b id="ins-peak-life-dl-date" style="color: #e2e8f0;">--</b></span>
+                    </div>
+                </div>
+
+                <!-- Lifetime UL Peak -->
+                <div class="glass-card" style="border-top: 2px solid #f472b6;">
+                    <div class="card-header">
+                        <span class="card-lbl">🏆 Lifetime Upload Record</span>
+                        <span class="card-badge" style="background: rgba(244,114,182,0.15); color: #f472b6;">All-Time</span>
+                    </div>
+                    <div class="card-val" id="ins-peak-life-ul" style="color: #f472b6;">--</div>
+                    <div class="card-sub">
+                        <span>Achieved: <b id="ins-peak-life-ul-date" style="color: #e2e8f0;">--</b></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Dive Row 1: RF Quality Index & Tower Scorecard + Latency/Bufferbloat -->
+            <div class="tables-grid" style="margin-bottom: 20px;">
+                <!-- Card 1: RF Quality & Tower Performance -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">📶 RF Quality Index &amp; Link Health</span>
+                        <span class="pill-badge" id="ins-rf-grade-pill">Grade --</span>
+                    </div>
+                    <div style="padding: 18px 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                            <div>
+                                <div style="font-size: 28px; font-weight: 800; color: #34d399; font-family: var(--font-mono);" id="ins-rf-score">--%</div>
+                                <div style="font-size: 12px; color: var(--text-muted);" id="ins-rf-condition">Analyzing RF conditions...</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 13px; font-weight: 700; color: #f8fafc;" id="ins-rf-diagnosis-title">--</div>
+                                <div style="font-size: 11px; color: var(--text-muted); max-width: 200px;" id="ins-rf-diagnosis-desc">--</div>
+                            </div>
+                        </div>
+
+                        <!-- Progress breakdown bars -->
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                                    <span style="color: var(--text-muted);">SINR Channel Cleanliness (Weight 40%)</span>
+                                    <span style="font-family: var(--font-mono); font-weight: 600;" id="ins-bar-sinr-val">-- dB (Score: --%)</span>
+                                </div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div id="ins-bar-sinr" style="height: 100%; width: 0%; background: #34d399; transition: width 0.6s ease;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                                    <span style="color: var(--text-muted);">RSRP Signal Penetration (Weight 35%)</span>
+                                    <span style="font-family: var(--font-mono); font-weight: 600;" id="ins-bar-rsrp-val">-- dBm (Score: --%)</span>
+                                </div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div id="ins-bar-rsrp" style="height: 100%; width: 0%; background: #38bdf8; transition: width 0.6s ease;"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                                    <span style="color: var(--text-muted);">RSRQ Resource Quality (Weight 25%)</span>
+                                    <span style="font-family: var(--font-mono); font-weight: 600;" id="ins-bar-rsrq-val">-- dB (Score: --%)</span>
+                                </div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+                                    <div id="ins-bar-rsrq" style="height: 100%; width: 0%; background: #c084fc; transition: width 0.6s ease;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tower History Scorecard -->
+                        <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>📡 Observed Cell Towers</span>
+                            <span style="font-size: 10px; color: #34d399;" id="ins-handover-status">✅ Stable Link</span>
+                        </div>
+                        <div class="table-wrap" style="max-height: 190px; overflow-y: auto;">
+                            <table style="font-size: 11px;">
+                                <thead>
+                                    <tr><th>Tower (eNB/CID)</th><th>Band</th><th>Best SINR</th><th>Best RSRP</th><th>Samples</th><th>Status</th></tr>
+                                </thead>
+                                <tbody id="ins-towers-body">
+                                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 12px;">Loading towers...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Latency, Jitter & Bufferbloat Benchmark -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <span class="table-title">⏱️ Latency Jitter &amp; Bufferbloat Index</span>
+                        <span class="pill-badge" id="ins-bb-grade-pill">Grade --</span>
+                    </div>
+                    <div style="padding: 18px 20px;">
+                        <!-- Jitter Metrics Grid (3 boxes) -->
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px;">
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div style="font-size: 11px; color: var(--text-muted);">VPS Jitter</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #38bdf8; font-family: var(--font-mono); margin: 4px 0;" id="ins-jitter-vps">--</div>
+                                <div style="font-size: 9px; color: var(--text-muted);">Standard Dev</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div style="font-size: 11px; color: var(--text-muted);">Cloudflare Jitter</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #34d399; font-family: var(--font-mono); margin: 4px 0;" id="ins-jitter-cf">--</div>
+                                <div style="font-size: 9px; color: var(--text-muted);">Standard Dev</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 10px; text-align: center;">
+                                <div style="font-size: 11px; color: var(--text-muted);">Google Jitter</div>
+                                <div style="font-size: 18px; font-weight: 800; color: #fbbf24; font-family: var(--font-mono); margin: 4px 0;" id="ins-jitter-gg">--</div>
+                                <div style="font-size: 9px; color: var(--text-muted);">Standard Dev</div>
+                            </div>
+                        </div>
+
+                        <!-- Bufferbloat Scorecard Box -->
+                        <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 18px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: 700; font-size: 13px; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
+                                    <span>🌊</span> Bufferbloat Loaded Latency Score
+                                </span>
+                                <span class="card-badge" id="ins-bb-badge" style="background: rgba(52, 211, 153, 0.2); color: #34d399; font-size: 12px; font-weight: 800;">Grade --</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;" id="ins-bb-assessment">
+                                Calculating loaded queue delay...
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
+                                <span style="color: var(--text-muted);">Idle Ping: <b id="ins-bb-idle" style="color: #34d399;">-- ms</b></span>
+                                <span style="color: var(--text-muted);">Loaded Ping: <b id="ins-bb-loaded" style="color: #fbbf24;">-- ms</b></span>
+                                <span style="color: var(--text-muted);">Delta: <b id="ins-bb-delta" style="color: #f87171;">+-- ms</b></span>
+                            </div>
+                            <div style="height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; display: flex;">
+                                <div id="ins-bb-idle-bar" style="height: 100%; width: 50%; background: #34d399;" title="Base latency"></div>
+                                <div id="ins-bb-delta-bar" style="height: 100%; width: 50%; background: #fb923c;" title="Buffer queue latency"></div>
+                            </div>
+                        </div>
+
+                        <!-- Monthly Data Burn Rate & Pace -->
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;">
+                            <div style="font-weight: 700; font-size: 12px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                                <span>📊 Monthly Burn Rate &amp; Projection</span>
+                                <span id="ins-burn-days" style="color: #38bdf8; font-family: var(--font-mono); font-size: 11px;">-- days remaining</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-muted);">Month To Date</div>
+                                    <div style="font-size: 15px; font-weight: 700; color: #f8fafc; font-family: var(--font-mono); margin-top: 2px;" id="ins-burn-mtd">-- GB</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-muted);">Daily Burn Rate</div>
+                                    <div style="font-size: 15px; font-weight: 700; color: #38bdf8; font-family: var(--font-mono); margin-top: 2px;" id="ins-burn-daily">-- GB/d</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 10px; color: var(--text-muted);">Projected Total</div>
+                                    <div style="font-size: 15px; font-weight: 700; color: #a78bfa; font-family: var(--font-mono); margin-top: 2px;" id="ins-burn-projected">-- GB</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deep Dive Row 2: 24-Hour Usage & Congestion Profile Chart -->
+            <div class="chart-card" style="margin-bottom: 20px;">
+                <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <span class="chart-title">📈 24-Hour Speed Congestion &amp; Latency Profile (IST)</span>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            Hourly rolling averages: Download throughput (Mbps) vs Ping latency (ms) across the daily cycle
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <span class="card-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 11px;" id="ins-congestion-window-badge">
+                            🔥 Congestion: --
+                        </span>
+                        <span class="card-badge green" style="font-size: 11px;" id="ins-best-speed-badge">
+                            🚀 Off-Peak Peak: --
+                        </span>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 240px;"><canvas id="chart-congestion"></canvas></div>
+            </div>
+
+            <!-- Deep Dive Row 3: SLA Availability & Reliability Scorecard -->
+            <div class="glass-card" style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+                    <div>
+                        <div style="font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>🛡️</span> Cellular Link SLA Availability &amp; Reliability Scorecard
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                            Continuous heartbeat monitoring • Measured against downtime records &amp; packet drop history
+                        </div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted);">
+                        Primary Root Cause: <b id="ins-sla-rca" style="color: #38bdf8;">--</b>
+                    </div>
+                </div>
+
+                <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 0;">
+                    <!-- 24H SLA -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+                            <span>Rolling 24-Hour</span>
+                            <span id="ins-sla-24h-outages" style="color: #fb923c; font-weight: 600;">-- outages</span>
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #34d399; font-family: var(--font-mono);" id="ins-sla-24h">--%</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                            Downtime: <b id="ins-sla-24h-down" style="color: var(--text-main);">--</b>
+                        </div>
+                    </div>
+
+                    <!-- 7D SLA -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+                            <span>Rolling 7-Day</span>
+                            <span id="ins-sla-7d-outages" style="color: #fb923c; font-weight: 600;">-- outages</span>
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #38bdf8; font-family: var(--font-mono);" id="ins-sla-7d">--%</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                            Downtime: <b id="ins-sla-7d-down" style="color: var(--text-main);">--</b>
+                        </div>
+                    </div>
+
+                    <!-- 30D SLA -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+                            <span>Rolling 30-Day</span>
+                            <span id="ins-sla-30d-outages" style="color: #fb923c; font-weight: 600;">-- outages</span>
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #a78bfa; font-family: var(--font-mono);" id="ins-sla-30d">--%</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                            Downtime: <b id="ins-sla-30d-down" style="color: var(--text-main);">--</b>
+                        </div>
+                    </div>
+
+                    <!-- MTBF Card -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+                            Mean Time Between Outages
+                        </div>
+                        <div style="font-size: 24px; font-weight: 800; color: #fbbf24; font-family: var(--font-mono);" id="ins-sla-mtbf">-- hrs</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                            Calculated across 7d window
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1273,6 +1666,9 @@
             const content = document.getElementById('tab-' + tabId);
             if (content) content.classList.add('active');
 
+            if (tabId === 'insights') {
+                fetchInsights();
+            }
             if (tabId === 'dns') {
                 fetchDns();
                 fetchDnsQueries(dnsQueriesPage);
@@ -1280,6 +1676,236 @@
             if (tabId === 'sms') fetchSMS();
             if (tabId === 'alerts') fetchAlerts();
             if (tabId === 'backups') fetchBackups();
+        }
+
+
+        // ==========================================
+        // NETWORK INTELLIGENCE & INSIGHTS FUNCTIONS
+        // ==========================================
+        let congestionChart = null;
+        let lastInsightsFetchTs = 0;
+
+        async function fetchInsights(forceRefresh = false) {
+            try {
+                const now = Date.now();
+                if (!forceRefresh && (now - lastInsightsFetchTs < 10000)) return;
+                lastInsightsFetchTs = now;
+
+                const res = await fetch('/api/telemetry/insights' + (forceRefresh ? '?refresh=1' : ''), {
+                    headers: getAuthHeaders()
+                });
+                if (res.status === 401) { showAuthOverlay(); return; }
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d || d.status !== 'success') return;
+
+                // 1. Peak speeds
+                const peaks = d.peaks || {};
+                setTextIfChanged('ins-peak-today-dl', peaks.today_download_str || '--');
+                setTextIfChanged('ins-peak-today-ul', peaks.today_upload_str || '--');
+                setTextIfChanged('ins-peak-life-dl', peaks.lifetime_download_str || '--');
+                setTextIfChanged('ins-peak-life-dl-date', peaks.lifetime_download_date || '--');
+                setTextIfChanged('ins-peak-life-ul', peaks.lifetime_upload_str || '--');
+                setTextIfChanged('ins-peak-life-ul-date', peaks.lifetime_upload_date || '--');
+
+                // Update main KPI card badges
+                setTextIfChanged('kpi-peak-today-dl', peaks.today_download_str || '--');
+                setTextIfChanged('kpi-peak-today-ul', peaks.today_upload_str || '--');
+                setTextIfChanged('kpi-peak-life-dl', peaks.lifetime_download_str || '--');
+                setTextIfChanged('kpi-peak-life-ul', peaks.lifetime_upload_str || '--');
+
+                // 2. RF Quality Index
+                const rf = d.rf_quality || {};
+                setTextIfChanged('ins-rf-score', (rf.score !== undefined ? rf.score + '%' : '--%'));
+                setTextIfChanged('ins-rf-badge', `RF Link: ${rf.score || 0}% • Grade ${rf.grade || '--'}`);
+                setTextIfChanged('ins-rf-grade-pill', `Grade ${rf.grade || '--'}`);
+                setTextIfChanged('ins-rf-condition', rf.condition || '--');
+                setTextIfChanged('ins-rf-diagnosis-title', rf.condition || '--');
+                setTextIfChanged('ins-rf-diagnosis-desc', rf.description || '--');
+
+                const bd = rf.breakdown || {};
+                const sinrEl = document.getElementById('ins-bar-sinr');
+                if (sinrEl) sinrEl.style.width = (bd.sinr_score || 0) + '%';
+                setTextIfChanged('ins-bar-sinr-val', `+${rf.sinr || 0} dB (Score: ${bd.sinr_score || 0}%)`);
+
+                const rsrpEl = document.getElementById('ins-bar-rsrp');
+                if (rsrpEl) rsrpEl.style.width = (bd.rsrp_score || 0) + '%';
+                setTextIfChanged('ins-bar-rsrp-val', `${rf.rsrp || 0} dBm (Score: ${bd.rsrp_score || 0}%)`);
+
+                const rsrqEl = document.getElementById('ins-bar-rsrq');
+                if (rsrqEl) rsrqEl.style.width = (bd.rsrq_score || 0) + '%';
+                setTextIfChanged('ins-bar-rsrq-val', `${rf.rsrq || 0} dB (Score: ${bd.rsrq_score || 0}%)`);
+
+                // 3. Tower Intelligence
+                const ti = d.tower_intelligence || {};
+                setTextIfChanged('ins-tower-stability-badge', ti.stability_status || 'Stable');
+                setTextIfChanged('ins-handover-status', ti.handovers_24h === 0 ? '✅ Locked & Stable (0 Handovers)' : `⚠️ ${ti.handovers_24h} Handovers (24h)`);
+
+                const tb = document.getElementById('ins-towers-body');
+                if (tb && Array.isArray(ti.towers)) {
+                    tb.innerHTML = ti.towers.map(t => `
+                        <tr style="${t.is_active ? 'background: rgba(52, 211, 153, 0.08); font-weight: 600;' : ''}">
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    ${t.is_active ? '<span style="color: #34d399;">●</span>' : '<span style="color: #64748b;">○</span>'}
+                                    <span style="font-family: var(--font-mono);">${t.enb} / ${t.cid}</span>
+                                </div>
+                            </td>
+                            <td><span class="card-badge" style="padding: 1px 6px; font-size: 10px;">${t.band}</span></td>
+                            <td style="color: #34d399; font-family: var(--font-mono);">+${t.best_sinr} dB</td>
+                            <td style="color: #38bdf8; font-family: var(--font-mono);">${t.best_rsrp} dBm</td>
+                            <td style="color: var(--text-muted);">${Number(t.count).toLocaleString()}</td>
+                            <td style="color: ${t.is_active ? '#34d399' : 'var(--text-muted)'}; font-size: 10px;">${t.last_seen_str}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // 4. Latency & Jitter
+                const lj = d.latency_jitter || {};
+                setTextIfChanged('ins-jitter-vps', `±${lj.vps_jitter_ms || 0} ms`);
+                setTextIfChanged('ins-jitter-cf', `±${lj.cf_jitter_ms || 0} ms`);
+                setTextIfChanged('ins-jitter-gg', `±${lj.gg_jitter_ms || 0} ms`);
+
+                const bb = lj.bufferbloat || {};
+                setTextIfChanged('ins-bb-grade-pill', `Grade ${bb.grade || '--'}`);
+                setTextIfChanged('ins-bb-badge', `Grade ${bb.grade || '--'}`);
+                setTextIfChanged('ins-bb-assessment', bb.assessment || '--');
+                setTextIfChanged('ins-bb-idle', `${bb.idle_ping_ms || 0} ms`);
+                setTextIfChanged('ins-bb-loaded', `${bb.loaded_ping_ms || 0} ms`);
+                setTextIfChanged('ins-bb-delta', `+${bb.delta_ms || 0} ms`);
+
+                const idlePct = Math.round(((bb.idle_ping_ms || 40) / ((bb.loaded_ping_ms || 65) || 1)) * 100);
+                const idleBar = document.getElementById('ins-bb-idle-bar');
+                const deltaBar = document.getElementById('ins-bb-delta-bar');
+                if (idleBar) idleBar.style.width = Math.min(100, Math.max(10, idlePct)) + '%';
+                if (deltaBar) deltaBar.style.width = Math.min(90, Math.max(0, 100 - idlePct)) + '%';
+
+                // 5. Monthly Burn Rate
+                const br = d.burn_rate || {};
+                setTextIfChanged('ins-burn-mtd', `${br.month_total_gb || 0} GB`);
+                setTextIfChanged('ins-burn-daily', `${br.daily_burn_rate_gb || 0} GB/d`);
+                setTextIfChanged('ins-burn-projected', `${br.projected_month_end_gb || 0} GB`);
+                setTextIfChanged('ins-burn-days', `${br.days_remaining || 0} days remaining (${br.days_elapsed || 0} elapsed)`);
+
+                // 6. 24-Hour Congestion Profile
+                const cg = d.congestion || {};
+                setTextIfChanged('ins-congestion-window-badge', `🔥 Peak Congestion: ${cg.peak_congestion_window || '--'}`);
+                setTextIfChanged('ins-best-speed-badge', `🚀 Off-Peak Golden: ${cg.best_speed_window || '--'}`);
+
+                renderCongestionChart(cg.hourly_profile || []);
+
+                // 7. SLA Availability
+                const sla = d.sla || {};
+                setTextIfChanged('ins-sla-24h', `${sla.sla_24h || 0}%`);
+                setTextIfChanged('ins-sla-24h-down', sla.downtime_24h_str || '0s');
+                setTextIfChanged('ins-sla-24h-outages', `${sla.outages_24h || 0} outages`);
+
+                setTextIfChanged('ins-sla-7d', `${sla.sla_7d || 0}%`);
+                setTextIfChanged('ins-sla-7d-down', sla.downtime_7d_str || '0s');
+                setTextIfChanged('ins-sla-7d-outages', `${sla.outages_7d || 0} outages`);
+
+                setTextIfChanged('ins-sla-30d', `${sla.sla_30d || 0}%`);
+                setTextIfChanged('ins-sla-30d-down', sla.downtime_30d_str || '0s');
+                setTextIfChanged('ins-sla-30d-outages', `${sla.outages_30d || 0} outages`);
+
+                setTextIfChanged('ins-sla-mtbf', `${sla.mtbf_hours || 0} hrs`);
+                setTextIfChanged('ins-sla-rca', sla.primary_cause || 'Carrier Radio Bearer Reconnect');
+
+            } catch (err) {
+                console.error('Error fetching insights:', err);
+            }
+        }
+
+        function renderCongestionChart(profile) {
+            const canvas = document.getElementById('chart-congestion');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            const labels = profile.map(p => p.label || `${p.hour}:00`);
+            const dlSpeeds = profile.map(p => p.avg_dl_mbps || 0);
+            const pings = profile.map(p => p.avg_ping_ms || 0);
+
+            if (congestionChart) {
+                congestionChart.data.labels = labels;
+                congestionChart.data.datasets[0].data = dlSpeeds;
+                congestionChart.data.datasets[1].data = pings;
+                congestionChart.update();
+                return;
+            }
+
+            congestionChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Avg Download Speed (Mbps)',
+                            data: dlSpeeds,
+                            backgroundColor: 'rgba(56, 189, 248, 0.45)',
+                            borderColor: '#38bdf8',
+                            borderWidth: 1.5,
+                            borderRadius: 4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            type: 'line',
+                            label: 'Avg Latency (ms)',
+                            data: pings,
+                            borderColor: '#fbbf24',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            tension: 0.35,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8', boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    if (ctx.datasetIndex === 0) return ` Download: ${ctx.parsed.y} Mbps`;
+                                    return ` Ping: ${ctx.parsed.y} ms`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: { color: '#64748b', font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            ticks: {
+                                color: '#38bdf8',
+                                callback: val => `${val}M`
+                            },
+                            title: { display: true, text: 'Download (Mbps)', color: '#38bdf8', font: { size: 10 } }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                color: '#fbbf24',
+                                callback: val => `${val}ms`
+                            },
+                            title: { display: true, text: 'Latency (ms)', color: '#fbbf24', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
         }
 
         // Initialize Charts
@@ -1469,6 +2095,13 @@
                 setTextIfChanged('kpi-carrier-name', prov);
                 setTextIfChanged('kpi-interface', hst.interface || conn.interface || '--');
 
+                // Hero Network Identity Strip Tower / Cell & APN
+                const enb = twr.enb || adv.enb || '--';
+                const cid = twr.cid || adv.cid || '--';
+                const cellDisplay = (enb !== '--' && cid !== '--') ? (enb + ' / ' + cid) : (enb !== '--' ? enb : (cid !== '--' ? cid : '--'));
+                setTextIfChanged('hero-tower-cell', cellDisplay);
+                setTextIfChanged('hero-apn', conn.apn || 'jionet');
+
                 const rsrp = twr.rsrp || adv.rsrp || adv.nr_rsrp || '--';
                 const sinr = twr.sinr || adv.sinr || '--';
                 const rsrq = adv.rsrq || '--';
@@ -1485,6 +2118,11 @@
 
                 setTextIfChanged('kpi-speed-dl', spd.download_speed || '0 B/s');
                 setTextIfChanged('kpi-speed-ul', spd.upload_speed || '0 B/s');
+                const pks = payload.peaks || d.peaks || {};
+                setTextIfChanged('kpi-peak-today-dl', pks.today_download_str || spd.today_peak_download || '--');
+                setTextIfChanged('kpi-peak-today-ul', pks.today_upload_str || spd.today_peak_upload || '--');
+                setTextIfChanged('kpi-peak-life-dl', pks.lifetime_download_str || spd.lifetime_peak_download || '--');
+                setTextIfChanged('kpi-peak-life-ul', pks.lifetime_upload_str || spd.lifetime_peak_upload || '--');
                 setTextIfChanged('kpi-band', conn.nr5g_band || conn.connection_bands || '--');
                 setTextIfChanged('kpi-net-type', conn.network_type || '--');
                 setTextIfChanged('kpi-usage-badge', usg.plan_type ? `${usg.plan_type} 5G` : 'Data Plan');
@@ -1809,9 +2447,17 @@
                 let html = '';
                 netConn.top_ports.forEach(p => {
                     const pct = Math.min(100, Math.round((p.count / total) * 100));
+                    const protoBadge = p.proto ? `<span class="pill-badge" style="font-size: 9px; padding: 1px 4px; margin-right: 4px; background: rgba(56, 189, 248, 0.15); color: #38bdf8;">${escapeHtml(p.proto)}</span>` : '';
+                    
+                    // Protected ports check (prevent killing web admin or SSH by mistake)
+                    const isProtected = [8080, 22, 443, 80].includes(Number(p.port));
+                    const killBtn = isProtected 
+                        ? `<span style="font-size: 10px; color: var(--text-muted);">Protected</span>`
+                        : `<button class="btn-kill-sm" id="btn-kill-${p.port}" onclick="killPortConnections(${p.port})" title="Flush active connections on port ${p.port}">⚡ Kill</button>`;
+
                     html += `<tr>
                         <td style="font-weight: 600; color: #38bdf8;">${p.port}</td>
-                        <td><span class="pill-badge" style="font-size: 10px; padding: 2px 6px;">${p.service || 'Port ' + p.port}</span></td>
+                        <td>${protoBadge}<span class="pill-badge" style="font-size: 10px; padding: 2px 6px;">${escapeHtml(p.service || 'Port ' + p.port)}</span></td>
                         <td><b>${p.count}</b> flows</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1821,9 +2467,36 @@
                                 <span style="font-size: 10px; color: var(--text-muted); width: 28px;">${pct}%</span>
                             </div>
                         </td>
+                        <td style="text-align: right;">${killBtn}</td>
                     </tr>`;
                 });
                 tbody.innerHTML = html;
+            }
+        }
+
+        async function killPortConnections(port) {
+            const btn = document.getElementById(`btn-kill-${port}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Killing...';
+            }
+            try {
+                const res = await fetch('/api/modem/kill-port', {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port: Number(port) })
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    showToast(`Queued kill for port ${port} connections (Cmd #${data.command_id})`);
+                    if (btn) btn.textContent = 'Flushed ✓';
+                } else {
+                    showToast(`Failed: ${data.error || 'Unknown error'}`, true);
+                    if (btn) { btn.disabled = false; btn.textContent = '⚡ Kill'; }
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, true);
+                if (btn) { btn.disabled = false; btn.textContent = '⚡ Kill'; }
             }
         }
 
@@ -2177,6 +2850,17 @@
         }
 
         // SMS & USSD
+        function copySmsText(btn, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = 'Copied! ✓';
+                btn.style.color = '#34d399';
+                setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+            }).catch(() => {
+                showToast('Failed to copy', true);
+            });
+        }
+
         async function fetchSMS() {
             try {
                 const res = await fetch('/api/sms/inbox', { headers: getAuthHeaders() });
@@ -2191,14 +2875,14 @@
                     }
                     tbody.innerHTML = msgs.map(m => `
                         <tr>
-                            <td style="color: #38bdf8; font-weight: 700;">${m.sender}</td>
-                            <td>
-                                <div>${m.message}</div>
-                                ${m.is_otp ? '<span class="pill-active" style="margin-top: 4px;">2FA / OTP Code</span>' : ''}
+                            <td style="color: #38bdf8; font-weight: 700; font-size: 11px;">${escapeHtml(m.sender)}</td>
+                            <td style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; color: #f1f5f9;">
+                                <div>${escapeHtml(m.message)}</div>
+                                ${m.is_otp ? '<span class="pill-active" style="margin-top: 6px; display: inline-block;">🔑 2FA / OTP Code</span>' : ''}
                             </td>
-                            <td>${m.date || formatDateTime(m.timestamp)}</td>
-                            <td>
-                                <button class="btn-page" onclick="navigator.clipboard.writeText('${m.message.replace(/'/g, "\\'")}')">📋 Copy</button>
+                            <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(m.date || formatDateTime(m.timestamp))}</td>
+                            <td style="text-align: right;">
+                                <button class="btn-page" style="padding: 3px 8px; font-size: 10px;" onclick="copySmsText(this, ${JSON.stringify(m.message)})">📋 Copy</button>
                             </td>
                         </tr>
                     `).join('');
@@ -2694,7 +3378,7 @@
             const hash = window.location.hash.replace("#", "");
             const urlParams = new URLSearchParams(window.location.search);
             const targetTab = hash || urlParams.get("tab");
-            if (targetTab && ["telemetry", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
+            if (targetTab && ["telemetry", "insights", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
                 switchTab(targetTab);
             }
             initCharts();
@@ -2706,10 +3390,12 @@
             fetchDowntimes();
             fetchDns();
             fetchAlerts();
+            fetchInsights();
             startSSE();
 
             setInterval(updateSyncTickers, 1000);
             setInterval(fetchLive, 5000);
+            setInterval(fetchInsights, 15000);
             setInterval(fetchDns, 8000);
             setInterval(fetchHistory, 15000);
             setInterval(fetchAlerts, 15000);
