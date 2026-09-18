@@ -154,6 +154,42 @@
         }
         .btn-lock:hover { color: #fff; border-color: var(--primary); }
 
+        .sim-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .sim-action-btn {
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-weight: 700;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            text-align: center;
+            line-height: 1.3;
+            width: 100%;
+        }
+        .sim-action-btn:hover {
+            filter: brightness(1.2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+        .sim-action-btn:active {
+            transform: translateY(0);
+        }
+        @media (max-width: 1024px) {
+            .sim-actions-grid {
+                grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+            }
+        }
+
         /* Top Navigation Tabs Bar */
         .tabs-nav {
             display: flex; gap: 8px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 4px;
@@ -1017,21 +1053,21 @@
                     </div>
 
                     <!-- Action buttons -->
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
-                        <button class="btn-lock" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56,189,248,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('unlock')">
-                            🔓 Manual Unlock SIM
+                    <div class="sim-actions-grid">
+                        <button class="sim-action-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56,189,248,0.3);" onclick="handleSimPinAction('unlock')">
+                            <span>🔓</span> <span>Manual Unlock SIM</span>
                         </button>
-                        <button class="btn-lock" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16,185,129,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('toggle_lock')">
-                            🔒 Enable / Disable PIN Lock
+                        <button class="sim-action-btn" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16,185,129,0.3);" onclick="handleSimPinAction('toggle_lock')">
+                            <span>🔒</span> <span>Enable / Disable PIN Lock</span>
                         </button>
-                        <button class="btn-lock" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168,85,247,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('change_pin')">
-                            🔑 Change SIM PIN
+                        <button class="sim-action-btn" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168,85,247,0.3);" onclick="handleSimPinAction('change_pin')">
+                            <span>🔑</span> <span>Change SIM PIN</span>
                         </button>
-                        <button class="btn-lock" style="background: rgba(251, 146, 60, 0.15); color: #fb923c; border-color: rgba(251,146,60,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('auto_unlock')">
-                            ⚙️ Configure Boot Auto-Unlock
+                        <button class="sim-action-btn" style="background: rgba(251, 146, 60, 0.15); color: #fb923c; border-color: rgba(251,146,60,0.3);" onclick="handleSimPinAction('auto_unlock')">
+                            <span>⚙️</span> <span>Configure Boot Auto-Unlock</span>
                         </button>
-                        <button class="btn-lock" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239,68,68,0.3); padding: 8px 14px; font-weight: 700;" onclick="handleSimPinAction('puk')">
-                            🆘 PUK Recovery
+                        <button class="sim-action-btn" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239,68,68,0.3);" onclick="handleSimPinAction('puk')">
+                            <span>🆘</span> <span>PUK Recovery</span>
                         </button>
                     </div>
 
