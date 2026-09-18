@@ -45,6 +45,35 @@
             background: #38bdf8;
             color: #080c14;
         }
+        #cell-tower-map {
+            height: 180px;
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #080c14;
+            position: relative;
+            overflow: hidden;
+        }
+        #cell-tower-map .leaflet-tile-pane {
+            filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+        }
+        #cell-tower-map .leaflet-popup-content-wrapper,
+        #cell-tower-map .leaflet-popup-tip {
+            background: #0f172a !important;
+            color: #f1f5f9 !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+            border-radius: 8px !important;
+        }
+        #cell-tower-map .leaflet-popup-content {
+            margin: 8px 12px !important;
+            line-height: 1.4 !important;
+            font-size: 11px !important;
+        }
+        #cell-tower-map .leaflet-container {
+            background: #080c14 !important;
+            font-family: inherit !important;
+        }
     </style>
     <script src="/chart.umd.min.js"></script>
     <script>
@@ -1876,10 +1905,13 @@
         }
 
         // ==========================================
-        // LEAFLET CELL TOWER MAP
+        // LEAFLET CELL TOWER MAP (100% Free OpenStreetMap)
         // ==========================================
         let towerMap = null;
         let towerMarker = null;
+        let gatewayMarker = null;
+        let towerVectorLine = null;
+        let lastTowerPos = null;
 
         function initTowerMap(towers, activeEnb, activeCid) {
             const mapEl = document.getElementById('cell-tower-map');
@@ -1894,13 +1926,29 @@
                     center: [baseLat, baseLon],
                     zoom: 14,
                     zoomControl: false,
-                    attributionControl: false
+                    attributionControl: false,
+                    scrollWheelZoom: false
                 });
 
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                // 100% Free OpenStreetMap tiles (no API key, no watermark)
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    subdomains: 'abcd'
+                    attribution: '&copy; OpenStreetMap'
                 }).addTo(towerMap);
+
+                // ResizeObserver ensures map fills full width and centers when container resizes
+                if (window.ResizeObserver) {
+                    const ro = new ResizeObserver(() => {
+                        if (towerMap) {
+                            towerMap.invalidateSize(false);
+                            if (lastTowerPos) {
+                                const b = L.latLngBounds([[baseLat, baseLon], lastTowerPos]);
+                                towerMap.fitBounds(b, { padding: [35, 35], maxZoom: 15, animate: false });
+                            }
+                        }
+                    });
+                    ro.observe(mapEl);
+                }
             }
 
             // Calculate estimated tower vector and position
@@ -1910,10 +1958,22 @@
             const lonOffset = (((cellIdNum / 1000) % 1000) - 500) * 0.00004;
             const towerLat = baseLat + latOffset;
             const towerLon = baseLon + lonOffset;
+            lastTowerPos = [towerLat, towerLon];
 
+            // Gateway marker (Modem node)
+            if (!gatewayMarker) {
+                const gatewayIcon = L.divIcon({
+                    className: 'gateway-node',
+                    html: '<div style="width:12px;height:12px;border-radius:50%;background:#38bdf8;box-shadow:0 0 10px #38bdf8;border:2px solid #ffffff;"></div>',
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+                gatewayMarker = L.marker([baseLat, baseLon], { icon: gatewayIcon }).addTo(towerMap);
+                gatewayMarker.bindPopup('<b>Fresnel 5G Gateway</b><br>Modem Node', { autoPan: false });
+            }
+
+            // Pulsing radio wave marker for active cell tower
             if (towerMarker) towerMap.removeLayer(towerMarker);
-
-            // Pulsing radio wave marker
             const towerIcon = L.divIcon({
                 className: 'radar-pulse',
                 iconSize: [14, 14],
@@ -1921,8 +1981,29 @@
             });
 
             towerMarker = L.marker([towerLat, towerLon], { icon: towerIcon }).addTo(towerMap);
-            towerMarker.bindPopup(`<b>Connected Cell Tower</b><br>eNB: ${activeTower.enb || '--'}<br>CID: ${activeTower.cid || '--'}<br>Band: ${activeTower.band || 'n78'}`).openPopup();
-            towerMap.setView([towerLat, towerLon], 14);
+            towerMarker.bindPopup(`<b>Connected Cell Tower</b><br>eNB: ${activeTower.enb || '--'}<br>CID: ${activeTower.cid || '--'}<br>Band: ${activeTower.band || 'n78'}`, { autoPan: false });
+
+            // Vector line connecting Gateway to Tower
+            if (towerVectorLine) towerMap.removeLayer(towerVectorLine);
+            towerVectorLine = L.polyline([[baseLat, baseLon], [towerLat, towerLon]], {
+                color: '#38bdf8',
+                dashArray: '4, 6',
+                weight: 2,
+                opacity: 0.8
+            }).addTo(towerMap);
+
+            // Recompute map container size and center properly
+            function fitAndCenter() {
+                if (!towerMap) return;
+                towerMap.invalidateSize(false);
+                const bounds = L.latLngBounds([[baseLat, baseLon], [towerLat, towerLon]]);
+                towerMap.fitBounds(bounds, { padding: [35, 35], maxZoom: 15, animate: false });
+            }
+
+            fitAndCenter();
+            // Staggered size invalidation to avoid corner tucking after initial layout/font render
+            setTimeout(fitAndCenter, 150);
+            setTimeout(fitAndCenter, 500);
 
             // Update distance and vector badge
             const estDistKm = (0.85 + (Math.abs(latOffset) * 20)).toFixed(2);
