@@ -14,6 +14,7 @@ import threading
 import queue
 import math
 import base64
+import hashlib
 
 from db import get_db, init_pool
 
@@ -23,6 +24,9 @@ PORT = int(os.environ.get("PORT", 8000))
 STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(os.path.dirname(__file__), "static"))
 AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "jio5g_telemetry_secret_token_8892")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "803bbe4c-9db5-4a38-bbdd-224666f9017b")
+
+# Cryptographically derived session token - prevents storing cleartext passwords in cookies
+SESSION_TOKEN = hashlib.sha256(f"fresnel_session:{DASHBOARD_PASSWORD}:{AUTH_TOKEN}".encode("utf-8")).hexdigest()
 
 sse_subscribers = []
 sse_lock = threading.Lock()
@@ -1918,21 +1922,32 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=STATIC_DIR, **kwargs)
 
+    def is_secure_request(self):
+        proto = self.headers.get("X-Forwarded-Proto", "").lower()
+        ssl_hdr = self.headers.get("X-Forwarded-Ssl", "").lower()
+        return proto == "https" or ssl_hdr == "on" or getattr(self.connection, "cipher", None) is not None
+
+    def get_session_cookie(self, max_age=2592000):
+        cookie = f"auth_token={SESSION_TOKEN}; Path=/; Max-Age={max_age}; SameSite=Strict; HttpOnly"
+        if self.is_secure_request():
+            cookie += "; Secure"
+        return cookie
+
     def is_authenticated(self):
         cookie_header = self.headers.get("Cookie", "")
-        if f"auth_token={DASHBOARD_PASSWORD}" in cookie_header:
+        if f"auth_token={SESSION_TOKEN}" in cookie_header or f"auth_token={DASHBOARD_PASSWORD}" in cookie_header:
             return True
         auth_header = self.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:].strip()
-            if token in (AUTH_TOKEN, DASHBOARD_PASSWORD):
+            if token in (AUTH_TOKEN, DASHBOARD_PASSWORD, SESSION_TOKEN):
                 return True
         key_header = self.headers.get("X-Auth-Key", "")
-        if key_header in (AUTH_TOKEN, DASHBOARD_PASSWORD):
+        if key_header in (AUTH_TOKEN, DASHBOARD_PASSWORD, SESSION_TOKEN):
             return True
         parsed = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(parsed.query)
-        if qs.get("key", [""])[0] in (AUTH_TOKEN, DASHBOARD_PASSWORD):
+        if qs.get("key", [""])[0] in (AUTH_TOKEN, DASHBOARD_PASSWORD, SESSION_TOKEN):
             return True
         return False
 
@@ -1962,19 +1977,29 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 login_data = {}
             password = login_data.get("password", "").strip()
 
-            if password == DASHBOARD_PASSWORD or password == AUTH_TOKEN:
+            if password in (DASHBOARD_PASSWORD, AUTH_TOKEN, SESSION_TOKEN):
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
-                self.send_header("Set-Cookie", f"auth_token={DASHBOARD_PASSWORD}; Path=/; Max-Age=2592000; SameSite=Strict; Secure")
+                self.send_header("Set-Cookie", self.get_session_cookie())
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"status": "ok", "token": DASHBOARD_PASSWORD}).encode("utf-8"))
+                self.wfile.write(json.dumps({"status": "ok", "token": SESSION_TOKEN}).encode("utf-8"))
             else:
                 self.send_response(403)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(json.dumps({"status": "error", "message": "Invalid password"}).encode("utf-8"))
+            return
+
+        # Logout endpoint
+        if parsed.path == "/api/auth/logout":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Set-Cookie", "auth_token=; Path=/; Max-Age=0; SameSite=Strict; HttpOnly")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok", "message": "Logged out"}).encode("utf-8"))
             return
 
         # Ingestion endpoint from modem
@@ -2481,13 +2506,13 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         if parsed.path in ("/", "/index.html"):
             qs = urllib.parse.parse_qs(parsed.query)
             key_param = qs.get("key", [""])[0]
-            if key_param == DASHBOARD_PASSWORD:
+            if key_param and key_param in (DASHBOARD_PASSWORD, AUTH_TOKEN, SESSION_TOKEN):
                 try:
                     with open(os.path.join(STATIC_DIR, "index.html"), "rb") as f:
                         content = f.read()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
-                    self.send_header("Set-Cookie", f"auth_token={DASHBOARD_PASSWORD}; Path=/; Max-Age=2592000; SameSite=Strict; Secure")
+                    self.send_header("Set-Cookie", self.get_session_cookie())
                     self.send_header("Content-Length", str(len(content)))
                     self.end_headers()
                     self.wfile.write(content)

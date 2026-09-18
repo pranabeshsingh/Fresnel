@@ -2000,7 +2000,7 @@
         let currentRange = '1h';
         let charts = {};
         let eventSource = null;
-        let authKey = localStorage.getItem('hub_auth_key') || '';
+        let authKey = '';
 
         // Pagination State
         const PAGE_SIZE = 5;
@@ -2038,12 +2038,16 @@
         // Check URL parameter for ?key=...
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('key') && urlParams.get('key')) {
-            authKey = urlParams.get('key');
-            localStorage.setItem('hub_auth_key', authKey);
+            const keyParam = urlParams.get('key');
+            authKey = keyParam;
+            // Clean sensitive key parameter from browser address bar to prevent history/referrer exposure
+            try {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {}
             fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: authKey })
+                body: JSON.stringify({ password: keyParam })
             }).catch(() => {});
         }
 
@@ -2081,7 +2085,6 @@
                 if (res.ok) {
                     const data = await res.json();
                     authKey = data.token || pwd;
-                    localStorage.setItem('hub_auth_key', authKey);
                     err.style.display = 'none';
                     hideAuthOverlay();
                     initApp();
@@ -2094,9 +2097,11 @@
             }
         }
 
-        function lockSession() {
-            localStorage.removeItem('hub_auth_key');
+        async function lockSession() {
             authKey = '';
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (e) {}
             if (eventSource) eventSource.close();
             showAuthOverlay();
         }

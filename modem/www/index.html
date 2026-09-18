@@ -2800,7 +2800,7 @@
             const dom = document.getElementById('dns-test-input').value.trim();
             if (!dom) return;
             const resBox = document.getElementById('dns-test-result');
-            resBox.innerHTML = `<span style="color: var(--primary);">Querying ${dom} through local In-Memory DNS resolver...</span>`;
+            resBox.innerHTML = `<span style="color: var(--primary);">Querying ${escapeHtml(dom)} through local In-Memory DNS resolver...</span>`;
             
             const t0 = performance.now();
             try {
@@ -2817,10 +2817,10 @@
                     } else {
                         html += `<div style="color: var(--accent); font-weight: 700; margin-bottom: 4px;">✅ RESOLVED DUAL-STACK (Roundtrip: ${latency} ms)</div>`;
                         if (d.ipv4_records && d.ipv4_records.length > 0) {
-                            html += `<div>IPv4 (A): <b style="color: var(--text-main);">${d.ipv4_records.join(', ')}</b></div>`;
+                            html += `<div>IPv4 (A): <b style="color: var(--text-main);">${d.ipv4_records.map(escapeHtml).join(', ')}</b></div>`;
                         }
                         if (d.ipv6_records && d.ipv6_records.length > 0) {
-                            html += `<div>IPv6 (AAAA): <b style="color: var(--text-main);">${d.ipv6_records.join(', ')}</b></div>`;
+                            html += `<div>IPv6 (AAAA): <b style="color: var(--text-main);">${d.ipv6_records.map(escapeHtml).join(', ')}</b></div>`;
                         }
                         if ((!d.ipv4_records || d.ipv4_records.length === 0) && (!d.ipv6_records || d.ipv6_records.length === 0)) {
                             html += `<div style="color: var(--text-muted);">NXDOMAIN or No Records Found</div>`;
@@ -2828,10 +2828,10 @@
                     }
                     resBox.innerHTML = html;
                 } else {
-                    resBox.innerHTML = `<span style="color: #f87171;">Lookup failed: ${d.message || 'Error'}</span>`;
+                    resBox.innerHTML = `<span style="color: #f87171;">Lookup failed: ${escapeHtml(d.message || 'Error')}</span>`;
                 }
             } catch(err) {
-                resBox.innerHTML = `<span style="color: #f87171;">Query error: ${err.message}</span>`;
+                resBox.innerHTML = `<span style="color: #f87171;">Query error: ${escapeHtml(err.message)}</span>`;
             }
         }
 
