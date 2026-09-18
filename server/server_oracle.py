@@ -21,8 +21,8 @@ IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
 PORT = int(os.environ.get("PORT", 8000))
 STATIC_DIR = os.environ.get("STATIC_DIR", os.path.join(os.path.dirname(__file__), "static"))
-AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "change_this_telemetry_token")
-DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "admin")
+AUTH_TOKEN = os.environ.get("AUTH_TOKEN", "jio5g_telemetry_secret_token_8892")
+DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "803bbe4c-9db5-4a38-bbdd-224666f9017b")
 
 sse_subscribers = []
 sse_lock = threading.Lock()
