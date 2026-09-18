@@ -1307,7 +1307,7 @@
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
                             <div style="font-weight: 700; font-size: 12px; color: #94a3b8; text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between;">
                                 <span>📡 Active Cell &amp; Radio Bearer</span>
-                                <span id="ins-tower-stability-badge" style="color: #34d399; font-family: var(--font-mono); font-size: 11px;">Locked &amp; Stable</span>
+                                <span id="ins-rf-stability-status" style="color: #34d399; font-family: var(--font-mono); font-size: 11px;">Locked &amp; Stable</span>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
                                 <div>
@@ -2288,6 +2288,7 @@
                 setTextIfChanged('ins-rf-active-cid', ti.active_cid || '--');
                 setTextIfChanged('ins-rf-active-band', ti.active_band || '--');
                 setTextIfChanged('ins-tower-stability-badge', ti.stability_status || 'Locked & Stable');
+                setTextIfChanged('ins-rf-stability-status', ti.stability_status || 'Locked & Stable');
                 setTextIfChanged('ins-handover-status', ti.handovers_24h === 0 ? '✅ Locked & Stable (0 Handovers)' : `⚠️ ${ti.handovers_24h} Handovers (24h)`);
                 currentTowersData = ti.towers || [];
                 renderTowersTablePaged();
