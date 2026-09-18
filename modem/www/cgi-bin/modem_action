@@ -19,7 +19,7 @@ TOKEN=$(get_param "token")
 # Strip non-hex
 TOKEN=$(echo "$TOKEN" | tr -cd 'a-fA-F0-9')
 
-if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+if [ ${#TOKEN} -ne 32 ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
     echo '{"status":"error","message":"Unauthorized"}'
     exit 0
 fi

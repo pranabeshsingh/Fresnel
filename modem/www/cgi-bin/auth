@@ -17,6 +17,53 @@ if (! -f $auth_conf) {
     }
 }
 
+sub hash_password {
+    my ($pwd, $salt) = @_;
+    $salt ||= "";
+    if (!$salt) {
+        if (open(my $rf, "<:raw", "/dev/urandom")) {
+            my $b;
+            read($rf, $b, 8);
+            close($rf);
+            $salt = unpack("H*", $b) if length($b) == 8;
+        }
+        $salt ||= sprintf("%08x", int(rand(0xFFFFFFFF)));
+    }
+    
+    # Try native Perl Digest::SHA
+    my $hex_hash = "";
+    eval {
+        require Digest::SHA;
+        $hex_hash = Digest::SHA::sha256_hex($salt . $pwd);
+    };
+    if ($hex_hash) {
+        return "sha256:$salt:$hex_hash";
+    }
+    
+    # Fallback to system sha256sum binary if available
+    my $sh_out = `printf '%s%s' "$salt" "$pwd" | sha256sum 2>/dev/null` || "";
+    if ($sh_out =~ /^([0-9a-fA-F]{64})/) {
+        return "sha256:$salt:" . lc($1);
+    }
+    
+    # Fallback if no crypto available on minimal firmware
+    return $pwd;
+}
+
+sub verify_password {
+    my ($entered, $stored) = @_;
+    if ($stored =~ /^sha256:([^:]+):([0-9a-fA-F]{64})$/) {
+        my ($salt, $expected_hash) = ($1, lc($2));
+        my $calc = hash_password($entered, $salt);
+        if ($calc =~ /^sha256:[^:]+:([0-9a-fA-F]{64})$/) {
+            return (lc($1) eq $expected_hash) ? 1 : 0;
+        }
+        return 0;
+    }
+    # Backward compatible plaintext comparison
+    return ($entered eq $stored) ? 1 : 0;
+}
+
 sub get_stored_password {
     my $pwd = "admin";
     if (open(my $af, "<", $auth_conf)) {
@@ -34,13 +81,25 @@ sub get_stored_password {
 
 sub save_password {
     my ($new_pwd) = @_;
+    my $hashed = hash_password($new_pwd);
     if (open(my $af, ">", $auth_conf)) {
-        print $af "password=$new_pwd\n";
+        print $af "password=$hashed\n";
         close($af);
         chmod(0600, $auth_conf);
         return 1;
     }
     return 0;
+}
+
+sub generate_secure_token {
+    if (open(my $rf, "<:raw", "/dev/urandom")) {
+        my $bytes;
+        read($rf, $bytes, 16);
+        close($rf);
+        return unpack("H*", $bytes) if length($bytes) == 16;
+    }
+    # Fallback
+    return sprintf("%08x%08x%08x%08x", int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)));
 }
 
 my $query_str = $ENV{QUERY_STRING} || "";
@@ -66,6 +125,9 @@ for my $pair (split(/&/, $params_str)) {
 my $action = $params{action} || "";
 my $password = $params{password} || "";
 my $token = $params{token} || "";
+$token =~ s/[^a-fA-F0-9]//g;
+my $is_valid_token = (length($token) == 32 && -f "$session_dir/$token");
+
 my $old_pwd = $params{old_password} || "";
 my $new_pwd = $params{new_password} || "";
 
@@ -74,8 +136,8 @@ print "Cache-Control: no-cache\n\n";
 
 if ($action eq "login") {
     my $stored = get_stored_password();
-    if ($password eq $stored) {
-        my $new_token = sprintf("%08x%08x%08x%08x", int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)), int(rand(0xFFFFFFFF)));
+    if (verify_password($password, $stored)) {
+        my $new_token = generate_secure_token();
         my $tok_file = "$session_dir/$new_token";
         if (open(my $tf, ">", $tok_file)) {
             print $tf time() . "\n";
@@ -86,21 +148,21 @@ if ($action eq "login") {
         print "{\"status\":\"error\",\"message\":\"Incorrect password\"}\n";
     }
 } elsif ($action eq "check") {
-    if ($token && -f "$session_dir/$token") {
+    if ($is_valid_token) {
         print "{\"status\":\"ok\",\"authenticated\":true}\n";
     } else {
         print "{\"status\":\"error\",\"authenticated\":false,\"message\":\"Session expired or invalid\"}\n";
     }
 } elsif ($action eq "logout") {
-    if ($token && -f "$session_dir/$token") {
+    if ($is_valid_token) {
         unlink("$session_dir/$token");
     }
     print "{\"status\":\"ok\",\"message\":\"Logged out\"}\n";
 } elsif ($action eq "change_password") {
     my $stored = get_stored_password();
-    if (!$token || ! -f "$session_dir/$token") {
+    if (!$is_valid_token) {
         print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
-    } elsif ($old_pwd ne $stored) {
+    } elsif (!verify_password($old_pwd, $stored)) {
         print "{\"status\":\"error\",\"message\":\"Current password is incorrect\"}\n";
     } elsif (length($new_pwd) < 4) {
         print "{\"status\":\"error\",\"message\":\"New password must be at least 4 characters\"}\n";

@@ -7,6 +7,7 @@ import time
 import datetime
 import traceback
 import re
+import contextlib
 
 IST_TZ = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 import os
@@ -71,10 +72,34 @@ def format_duration(seconds):
         parts.append(f"{secs}s")
     return " ".join(parts)
 
+def db_connect():
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    conn.execute("PRAGMA busy_timeout=30000;")
+    return conn
+
+@contextlib.contextmanager
+def get_db():
+    conn = db_connect()
+    cur = conn.cursor()
+    try:
+        yield conn, cur
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        try:
+            cur.close()
+        except Exception:
+            pass
+        conn.close()
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect()
     cur = conn.cursor()
+    cur.execute("PRAGMA journal_mode=WAL;")
+    cur.execute("PRAGMA synchronous=NORMAL;")
     cur.execute("""
     CREATE TABLE IF NOT EXISTS telemetry (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -458,7 +483,7 @@ def format_bps(bps):
 
 def get_setting(key, default=""):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect()
         cur = conn.cursor()
         cur.execute("SELECT value FROM settings WHERE key = ?", (key,))
         row = cur.fetchone()
@@ -469,7 +494,7 @@ def get_setting(key, default=""):
 
 def set_setting(key, val):
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect()
         cur = conn.cursor()
         cur.execute("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", (key, val))
         conn.commit()
@@ -500,7 +525,7 @@ def trigger_telegram_alert(title, msg, severity="info"):
 def log_alert(event_type, severity, title, message):
     now = int(time.time())
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect()
         cur = conn.cursor()
         cur.execute("INSERT INTO alert_events (event_type, severity, title, message, timestamp) VALUES (?, ?, ?, ?, ?)",
                     (event_type, severity, title, message, now))
@@ -522,7 +547,7 @@ def watchdog_worker():
                 modem_online_status = "offline"
                 offline_since_ts = last_heartbeat_ts
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = db_connect()
                     cur = conn.cursor()
                     cur.execute("INSERT INTO downtime_history (start_ts, end_ts, duration_sec) VALUES (?, NULL, NULL)", (offline_since_ts,))
                     current_downtime_id = cur.lastrowid
@@ -541,7 +566,7 @@ def send_periodic_summary():
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = db_connect()
         cur = conn.cursor()
         cur.execute("SELECT raw_json FROM telemetry ORDER BY id DESC LIMIT 1")
         row = cur.fetchone()
@@ -666,7 +691,7 @@ def record_telemetry(data, client_ip=""):
             duration = now - (offline_since_ts or now)
             duration_str = format_duration(duration)
             try:
-                conn_dt = sqlite3.connect(DB_PATH)
+                conn_dt = db_connect()
                 cur_dt = conn_dt.cursor()
                 if current_downtime_id:
                     cur_dt.execute("UPDATE downtime_history SET end_ts = ?, duration_sec = ? WHERE id = ?", (now, duration, current_downtime_id))
@@ -681,7 +706,7 @@ def record_telemetry(data, client_ip=""):
             log_alert("modem_online", "info", "Modem Restored Online", f"Modem reconnected. Downtime recorded: {duration_str}.")
             broadcast_sse({"type": "modem_status", "status": "online", "downtime": duration, "downtime_str": duration_str})
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db_connect()
     cur = conn.cursor()
 
     conn_data = data.get("connection", {})
@@ -1030,7 +1055,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 status = res_data.get("status", "done")
                 output = res_data.get("output", "")
 
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 now = int(time.time())
                 cur.execute("UPDATE command_queue SET status = ?, output = ?, executed_at = ? WHERE id = ?",
@@ -1059,7 +1084,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 sms_payload = json.loads(body.decode("utf-8"))
                 messages = sms_payload.get("messages", [])
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 now = int(time.time())
                 new_sms_count = 0
@@ -1101,7 +1126,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 b64_content = body
                 filename = f"modem_backup_{time.strftime('%Y%m%d_%H%M%S')}.tar.gz"
                 now = int(time.time())
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 cur.execute("INSERT INTO config_backups (filename, timestamp, size_bytes, content) VALUES (?, ?, ?, ?)",
                             (filename, now, len(b64_content), sqlite3.Binary(b64_content)))
@@ -1133,8 +1158,12 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 cmd_type = cmd_req.get("command_type", "AT").upper()
                 payload = cmd_req.get("payload", "").strip()
 
+                ALLOWED_COMMAND_TYPES = {"AT", "BAND_LOCK", "USSD", "REBOOT", "BACKUP", "SIM_PIN", "SMS"}
+                if cmd_type not in ALLOWED_COMMAND_TYPES:
+                    raise ValueError(f"Invalid or unauthorized command type: {cmd_type}")
+
                 now = int(time.time())
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 cur.execute("INSERT INTO command_queue (command_type, payload, status, created_at) VALUES (?, ?, 'pending', ?)",
                             (cmd_type, payload, now))
@@ -1163,7 +1192,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 payload = json.dumps({"recipient": recipient, "message": text})
 
                 now = int(time.time())
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 cur.execute("INSERT INTO command_queue (command_type, payload, status, created_at) VALUES ('SMS', ?, 'pending', ?)",
                             (payload, now))
@@ -1190,7 +1219,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 code = ussd_req.get("code", "").strip()
 
                 now = int(time.time())
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 cur.execute("INSERT INTO command_queue (command_type, payload, status, created_at) VALUES ('USSD', ?, 'pending', ?)",
                             (code, now))
@@ -1211,7 +1240,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Trigger Backup
         if parsed.path == "/api/backup/trigger":
             now = int(time.time())
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("INSERT INTO command_queue (command_type, payload, status, created_at) VALUES ('BACKUP', 'all', 'pending', ?)", (now,))
             cmd_id = cur.lastrowid
@@ -1263,7 +1292,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Prometheus /metrics exporter
         if parsed.path == "/metrics":
             now = int(time.time())
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT raw_json, timestamp FROM telemetry ORDER BY id DESC LIMIT 1")
             row = cur.fetchone()
@@ -1382,7 +1411,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_unauthorized()
                 return
 
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT id, command_type, payload FROM command_queue WHERE status = 'pending' ORDER BY id ASC")
             rows = cur.fetchall()
@@ -1436,7 +1465,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 sse_subscribers.append(q)
 
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = db_connect()
                 cur = conn.cursor()
                 cur.execute("SELECT raw_json, timestamp, public_ip FROM telemetry ORDER BY id DESC LIMIT 1")
                 row = cur.fetchone()
@@ -1472,7 +1501,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Telemetry Live
         if parsed.path == "/api/telemetry/live":
             now = int(time.time())
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT raw_json, timestamp, public_ip FROM telemetry ORDER BY id DESC LIMIT 1")
             row = cur.fetchone()
@@ -1498,7 +1527,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Downtimes API
         if parsed.path == "/api/telemetry/downtimes":
             page, limit, offset = parse_pagination(parsed.query, default_limit=5, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM downtime_history")
             total = cur.fetchone()[0] or 0
@@ -1542,7 +1571,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             duration = durations.get(range_arg, 3600)
             start_ts = now - duration
 
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("""
             SELECT timestamp, rsrp, sinr, download_bps, upload_bps, ping_cf_ms, cpu_percent, ram_percent, ping_vps_ms, ping_gg_ms
@@ -1574,7 +1603,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Towers API
         if parsed.path == "/api/telemetry/towers":
             page, limit, offset = parse_pagination(parsed.query, default_limit=5, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM tower_history")
             total = cur.fetchone()[0] or 0
@@ -1611,7 +1640,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Daily Data Usage History API
         if parsed.path == "/api/usage/history":
             page, limit, offset = parse_pagination(parsed.query, default_limit=5, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM daily_usage")
             total = cur.fetchone()[0] or 0
@@ -1710,7 +1739,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # IPs API
         if parsed.path == "/api/telemetry/ips":
             page, limit, offset = parse_pagination(parsed.query, default_limit=5, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM ip_history")
             total = cur.fetchone()[0] or 0
@@ -1747,7 +1776,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Command History API
         if parsed.path == "/api/command/history":
             page, limit, offset = parse_pagination(parsed.query, default_limit=10, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM command_queue")
             total = cur.fetchone()[0] or 0
@@ -1784,7 +1813,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # SMS Inbox API
         if parsed.path == "/api/sms/inbox":
             page, limit, offset = parse_pagination(parsed.query, default_limit=10, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT COUNT(*) FROM sms_inbox")
             total = cur.fetchone()[0] or 0
@@ -1819,7 +1848,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             return
         # DNS Telemetry & Analytics API
         if parsed.path == "/api/telemetry/dns":
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             
             cur.execute("SELECT raw_json, timestamp FROM telemetry ORDER BY id DESC LIMIT 1")
@@ -1938,7 +1967,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             status_filter = qs.get("status", ["ALL"])[0].upper()
             search_query = qs.get("search", [""])[0].strip().lower()
 
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
 
             where_clauses = []
@@ -2033,7 +2062,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             
             status = "BLOCKED" if is_blocked else "RESOLVED"
             try:
-                conn_test = sqlite3.connect(DB_PATH)
+                conn_test = db_connect()
                 cur_test = conn_test.cursor()
                 cur_test.execute("""
                 INSERT INTO dns_queries (timestamp, domain, query_type, client_ip, status, latency_ms)
@@ -2062,7 +2091,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
         # Alert Events API
         if parsed.path == "/api/alerts":
             page, limit, offset = parse_pagination(parsed.query, default_limit=10, max_limit=500)
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
 
             cur.execute("SELECT COUNT(*) FROM alert_events")
@@ -2106,7 +2135,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
 
         # Backup List API
         if parsed.path == "/api/backup/list":
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT id, filename, timestamp, size_bytes FROM config_backups ORDER BY id DESC LIMIT 20")
             rows = cur.fetchall()
@@ -2128,7 +2157,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 return
 
-            conn = sqlite3.connect(DB_PATH)
+            conn = db_connect()
             cur = conn.cursor()
             cur.execute("SELECT filename, content FROM config_backups WHERE id = ?", (backup_id,))
             row = cur.fetchone()
@@ -2169,9 +2198,10 @@ def run():
     summary_thread = threading.Thread(target=periodic_summary_worker, daemon=True)
     summary_thread.start()
 
+    HOST = os.environ.get("HOST", "0.0.0.0")
     socketserver.ThreadingTCPServer.allow_reuse_address = True
-    with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), TelemetryHandler) as httpd:
-        print(f"Server started on http://127.0.0.1:{PORT}")
+    with socketserver.ThreadingTCPServer((HOST, PORT), TelemetryHandler) as httpd:
+        print(f"Server started on http://{HOST}:{PORT}")
         httpd.serve_forever()
 
 if __name__ == "__main__":

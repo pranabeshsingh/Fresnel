@@ -1,8 +1,7 @@
 // Fresnel 5G Cloud Hub Service Worker
-const CACHE_NAME = 'fresnel-v4';
+const CACHE_NAME = 'fresnel-v5';
 const STATIC_ASSETS = [
   '/',
-  '/chart.umd.min.js',
   '/manifest.json'
 ];
 

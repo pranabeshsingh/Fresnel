@@ -27,7 +27,7 @@ for my $pair (split(/&/, $params_str)) {
 my $token = $params{'token'} || "";
 $token =~ s/[^a-fA-F0-9]//g;
 
-if (!$token || ! -f "/tmp/gw_sessions/$token") {
+if (length($token) != 32 || ! -f "/tmp/gw_sessions/$token") {
     print '{"status":"error","message":"Unauthorized"}';
     exit(0);
 }

@@ -1,7 +1,7 @@
 #!/bin/sh
-TOKEN=$(echo "$QUERY_STRING" | grep -o 'token=[^&]*' | cut -d'=' -f2)
+TOKEN=$(echo "$QUERY_STRING" | grep -o 'token=[^&]*' | cut -d'=' -f2 | tr -cd 'a-fA-F0-9')
 
-if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+if [ ${#TOKEN} -ne 32 ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
     echo "Status: 401 Unauthorized"
     echo "Content-type: application/json"
     echo "Cache-Control: no-cache"

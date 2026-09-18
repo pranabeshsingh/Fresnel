@@ -26,7 +26,7 @@ for my $pair (split(/&/, $params_str)) {
 my $token = $params{'token'} || "";
 $token =~ s/[^a-fA-F0-9]//g;
 
-if (!$token || ! -f "/tmp/gw_sessions/$token") {
+if (length($token) != 32 || ! -f "/tmp/gw_sessions/$token") {
     print '{"status":"error","message":"Unauthorized"}';
     exit(0);
 }
@@ -37,7 +37,7 @@ my $lock_file = "/tmp/smd7.lock";
 
 sub at_cmd {
     my ($cmd) = @_;
-    open(my $lf, ">", $lock_file) or return "";
+    open(my $lf, ">>", $lock_file) or return "";
     flock($lf, LOCK_EX);
     my ($r, $w); pipe($r, $w);
     my $pid = fork();
@@ -117,7 +117,7 @@ if ($action eq "send") {
     }
     
     at_cmd("AT+CMGF=1");
-    open(my $lf, ">", $lock_file) or do { print '{"status":"error","message":"Lock error"}'; exit(0); };
+    open(my $lf, ">>", $lock_file) or do { print '{"status":"error","message":"Lock error"}'; exit(0); };
     flock($lf, LOCK_EX);
     
     sysopen(my $w, $dev, O_WRONLY);

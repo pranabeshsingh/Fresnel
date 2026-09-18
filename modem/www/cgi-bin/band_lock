@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Fcntl;
+use Fcntl qw(:DEFAULT :flock);
 
 my $dev = "/dev/smd7";
 my $session_dir = "/tmp/gw_sessions";
+my $lock_file = "/tmp/smd7.lock";
 
 my $query_str = $ENV{QUERY_STRING} || "";
 my $post_data = "";
@@ -27,13 +28,14 @@ for my $pair (split(/&/, $params_str)) {
 }
 
 my $token = $params{token} || "";
+$token =~ s/[^a-fA-F0-9]//g;
 my $action = $params{action} || "get_mode";
 my $mode = $params{mode} || "";
 
 print "Content-type: application/json\n";
 print "Cache-Control: no-cache\n\n";
 
-if (!$token || ! -f "$session_dir/$token") {
+if (length($token) != 32 || ! -f "$session_dir/$token") {
     print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
     exit(0);
 }
@@ -41,10 +43,18 @@ if (!$token || ! -f "$session_dir/$token") {
 sub run_at {
     my ($cmd) = @_;
     $cmd =~ s/\r|\n//g;
+    
+    open(my $lf, '>>', $lock_file);
+    flock($lf, LOCK_EX);
+
     my ($reader, $writer);
     pipe($reader, $writer);
     my $pid = fork();
-    if (!defined $pid) { return ""; }
+    if (!defined $pid) { 
+        flock($lf, LOCK_UN);
+        close($lf);
+        return ""; 
+    }
     if ($pid == 0) {
         close $reader;
         sysopen(my $r, $dev, O_RDONLY) or exit(1);
@@ -75,22 +85,30 @@ sub run_at {
     }
     close $reader;
     waitpid($pid, 0);
+
+    flock($lf, LOCK_UN);
+    close($lf);
     return $out;
 }
 
 if ($action eq "set_mode") {
     my $ws46_val = 25;
-    if ($mode eq "5g_only") {
-        $ws46_val = 30;
+    my $preset_name = "Auto (5G/4G)";
+
+    if ($mode eq "5g_only" || $mode eq "5g_n78" || $mode eq "5g_n28") {
+        $ws46_val = 30; # 5G NR Only / SA Lock
+        $preset_name = "5G Only Standalone";
     } elsif ($mode eq "4g_only") {
-        $ws46_val = 28;
+        $ws46_val = 28; # 4G LTE Only
+        $preset_name = "4G LTE Only";
     } else {
-        $ws46_val = 25;
+        $ws46_val = 25; # Auto 5G Preferred
+        $preset_name = "Auto 5G Preferred";
     }
     
     my $res = run_at("AT+WS46=$ws46_val");
     if ($res =~ /OK/) {
-        print "{\"status\":\"ok\",\"mode\":\"$mode\",\"message\":\"Network mode updated successfully\"}\n";
+        print "{\"status\":\"ok\",\"mode\":\"$mode\",\"preset\":\"$preset_name\",\"message\":\"Network mode updated to $preset_name\"}\n";
     } else {
         print "{\"status\":\"error\",\"message\":\"Failed to set network mode\"}\n";
     }

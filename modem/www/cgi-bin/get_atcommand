@@ -14,18 +14,18 @@ if [ -n "${QUERY_STRING}" ]; then
         if [ "$key" = "atcmd" ]; then
             CMD=$(echo "$val" | sed 's/+/ /g; s/%20/ /g; s/%22/\"/g; s/%3D/=/g; s/%3F/?/g; s/%2B/+/g')
         elif [ "$key" = "token" ]; then
-            TOKEN="$val"
+            TOKEN=$(echo "$val" | tr -cd 'a-fA-F0-9')
         fi
     done
 fi
 
-if [ -z "$TOKEN" ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
+if [ ${#TOKEN} -ne 32 ] || [ ! -f "/tmp/gw_sessions/$TOKEN" ]; then
     echo "ERROR: Unauthorized"
     exit 0
 fi
 
 if [ -n "$CMD" ]; then
-    /usrdata/simpleadmin/scripts/doAT.py "$CMD"
+    /usrdata/simpleadmin/scripts/doAT.pl "$CMD"
 else
     echo "ERROR: No command provided"
 fi

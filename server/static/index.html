@@ -3692,7 +3692,8 @@
 
         // SMS & USSD
         function copySmsText(btn, text) {
-            navigator.clipboard.writeText(text).then(() => {
+            const smsVal = text || btn.getAttribute('data-sms') || '';
+            navigator.clipboard.writeText(smsVal).then(() => {
                 const orig = btn.textContent;
                 btn.textContent = 'Copied! ✓';
                 btn.style.color = '#34d399';
@@ -3723,7 +3724,7 @@
                             </td>
                             <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(m.date || formatDateTime(m.timestamp))}</td>
                             <td style="text-align: right;">
-                                <button class="btn-page" style="padding: 3px 8px; font-size: 10px;" onclick="copySmsText(this, ${JSON.stringify(m.message)})">📋 Copy</button>
+                                <button class="btn-page" style="padding: 3px 8px; font-size: 10px;" data-sms="${escapeHtml(m.message || '')}" onclick="copySmsText(this)">📋 Copy</button>
                             </td>
                         </tr>
                     `).join('');

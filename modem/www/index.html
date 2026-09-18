@@ -2308,6 +2308,16 @@
             document.getElementById('adv-arrow').textContent = el.classList.contains('open') ? '▲' : '▼';
         }
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function showToast(msg, isError = false) {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
@@ -2900,10 +2910,10 @@
                         container.innerHTML = msgs.map(m => `
                             <div class="sms-item" style="background: var(--pill-bg); border: 1px solid var(--liquid-border); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
                                 <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
-                                    <span><b>${m.sender}</b> ${m.is_otp ? '<span style="background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ALERT</span>' : ''}</span>
-                                    <span style="color: var(--text-muted);">${m.date}</span>
+                                    <span><b>${escapeHtml(m.sender)}</b> ${m.is_otp ? '<span style="background: #ef4444; color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">ALERT</span>' : ''}</span>
+                                    <span style="color: var(--text-muted);">${escapeHtml(m.date)}</span>
                                 </div>
-                                <div style="font-size: 13px; line-height: 1.4; color: var(--text-main);">${m.body}</div>
+                                <div style="font-size: 13px; line-height: 1.4; color: var(--text-main);">${escapeHtml(m.body)}</div>
                             </div>
                         `).join('');
                     }

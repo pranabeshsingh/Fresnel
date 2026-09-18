@@ -28,13 +28,14 @@ for my $pair (split(/&/, $params_str)) {
 }
 
 my $token = $params{token} || "";
+$token =~ s/[^a-fA-F0-9]//g;
 my $action = $params{action} || "get_mode";
 my $mode = $params{mode} || "";
 
 print "Content-type: application/json\n";
 print "Cache-Control: no-cache\n\n";
 
-if (!$token || ! -f "$session_dir/$token") {
+if (length($token) != 32 || ! -f "$session_dir/$token") {
     print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
     exit(0);
 }

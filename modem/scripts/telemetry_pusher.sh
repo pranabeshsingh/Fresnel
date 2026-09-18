@@ -249,9 +249,6 @@ while true; do
                         OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl $CMD_PAYLOAD 2>&1)
                         [ $? -ne 0 ] && STATUS="error"
                         ;;
-                    SHELL)
-                        OUT=$(eval "$CMD_PAYLOAD" 2>&1)
-                        ;;
                     SMS)
                         OUT=$(perl /usrdata/simpleadmin/scripts/send_sms.pl "$CMD_PAYLOAD" 2>&1)
                         [ $? -ne 0 ] && STATUS="error"
