@@ -14,6 +14,16 @@ get_param() {
     echo "$QUERY_STRING" | tr '&' '\n' | grep "^$1=" | head -n 1 | cut -d'=' -f2- | sed 's/+/ /g;s/%20/ /g;s/%23/#/g;s/%2A/*/g;s/%3A/:/g;s/%2F/\//g'
 }
 
+sed_inplace() {
+    _EXPR="$1"
+    _TARGET="$2"
+    if sed --version 2>/dev/null | grep -q GNU; then
+        sed -i "$_EXPR" "$_TARGET" 2>/dev/null || true
+    else
+        sed -i '' "$_EXPR" "$_TARGET" 2>/dev/null || sed -i "$_EXPR" "$_TARGET" 2>/dev/null || true
+    fi
+}
+
 ACTION=$(get_param "action")
 TOKEN=$(get_param "token")
 # Strip non-hex
@@ -417,6 +427,110 @@ if [ "$ACTION" = "sim_clear_auto_unlock" ]; then
     OUT=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --clear-auto-unlock 2>&1)
     STATUS_JSON=$(/usrdata/simpleadmin/scripts/sim_pin_helper.pl --status)
     send_sim_json "ok" "$OUT" "$STATUS_JSON"
+    exit 0
+fi
+
+if [ "$ACTION" = "toggle_telemetry" ]; then
+    STATE=$(get_param "state" | tr -cd '0-9')
+    STATE_FILE="/data/simpleadmin/services_state.json"
+    CONF_FILE="/data/simpleadmin/telemetry.conf"
+    mkdir -p "$(dirname "$STATE_FILE")" 2>/dev/null || true
+    
+    if [ "$STATE" = "1" ]; then
+        if [ -f "$STATE_FILE" ]; then
+            sed_inplace 's/"telemetry_enabled": *[0-9]*/"telemetry_enabled": 1/' "$STATE_FILE"
+        else
+            echo '{"tailscale_enabled": 0, "adblock_enabled": 1, "telemetry_enabled": 1, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        
+        if [ -f "$CONF_FILE" ]; then
+            sed_inplace 's/^TELEMETRY_ENABLED=.*/TELEMETRY_ENABLED=1/' "$CONF_FILE"
+        else
+            echo "TELEMETRY_ENABLED=1" > "$CONF_FILE"
+        fi
+        
+        URL=$(grep -E '^TELEMETRY_BASE_URL=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        if [ -n "$URL" ] && [ "$URL" != "https://modem.example.com" ] && [ "$URL" != "https://your-vps-domain.com" ]; then
+            pkill -f 'telemetry_pusher.sh' 2>/dev/null || true
+            if [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
+                setsid /usrdata/simpleadmin/scripts/telemetry_pusher.sh </dev/null >/tmp/telemetry_pusher.log 2>&1 &
+            fi
+            echo '{"status":"ok","telemetry":1,"message":"Remote telemetry enabled and pusher running"}'
+        else
+            echo '{"status":"ok","telemetry":1,"warning":"unconfigured","message":"Remote telemetry enabled (please configure VPS URL)"}'
+        fi
+    else
+        if [ -f "$STATE_FILE" ]; then
+            sed_inplace 's/"telemetry_enabled": *[0-9]*/"telemetry_enabled": 0/' "$STATE_FILE"
+        else
+            echo '{"tailscale_enabled": 0, "adblock_enabled": 1, "telemetry_enabled": 0, "blocked_domains_count": 45000}' > "$STATE_FILE"
+        fi
+        
+        if [ -f "$CONF_FILE" ]; then
+            sed_inplace 's/^TELEMETRY_ENABLED=.*/TELEMETRY_ENABLED=0/' "$CONF_FILE"
+        fi
+        
+        pkill -f 'telemetry_pusher.sh' 2>/dev/null || true
+        echo '{"status":"ok","telemetry":0,"message":"Remote telemetry disabled (0% resource load)"}'
+    fi
+    sync 2>/dev/null || true
+    exit 0
+fi
+
+if [ "$ACTION" = "set_telemetry_config" ]; then
+    URL=$(get_param "url")
+    TEL_TOKEN=$(get_param "telemetry_token")
+    CONF_FILE="/data/simpleadmin/telemetry.conf"
+    STATE_FILE="/data/simpleadmin/services_state.json"
+    mkdir -p "$(dirname "$CONF_FILE")" 2>/dev/null || true
+    
+    CUR_EN=1
+    if [ -f "$STATE_FILE" ]; then
+        EN_VAL=$(grep -o '"telemetry_enabled": *[0-9]*' "$STATE_FILE" 2>/dev/null | tr -cd '0-9')
+        [ -n "$EN_VAL" ] && CUR_EN=$EN_VAL
+    fi
+    
+    cat << EOF > "$CONF_FILE"
+TELEMETRY_ENABLED=$CUR_EN
+TELEMETRY_BASE_URL="$URL"
+TELEMETRY_TOKEN="$TEL_TOKEN"
+EOF
+    sync 2>/dev/null || true
+    
+    if [ "$CUR_EN" = "1" ] && [ -n "$URL" ] && [ "$URL" != "https://modem.example.com" ] && [ "$URL" != "https://your-vps-domain.com" ]; then
+        pkill -f 'telemetry_pusher.sh' 2>/dev/null || true
+        if [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
+            setsid /usrdata/simpleadmin/scripts/telemetry_pusher.sh </dev/null >/tmp/telemetry_pusher.log 2>&1 &
+        fi
+    fi
+    
+    echo '{"status":"ok","message":"Telemetry configuration saved"}'
+    exit 0
+fi
+
+if [ "$ACTION" = "get_telemetry_config" ]; then
+    CONF_FILE="/data/simpleadmin/telemetry.conf"
+    URL=""
+    TOK=""
+    if [ -f "$CONF_FILE" ]; then
+        URL=$(grep -E '^TELEMETRY_BASE_URL=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        TOK=$(grep -E '^TELEMETRY_TOKEN=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    fi
+    
+    MASKED=""
+    if [ -n "$TOK" ]; then
+        if [ ${#TOK} -gt 8 ]; then
+            PREFIX=$(echo "$TOK" | cut -c 1-4)
+            SUFFIX=$(echo "$TOK" | awk '{print substr($0, length($0)-3)}')
+            MASKED="${PREFIX}...${SUFFIX}"
+        else
+            MASKED="********"
+        fi
+    fi
+    
+    HAS_TOK=0
+    [ -n "$TOK" ] && HAS_TOK=1
+    echo "{\"status\":\"ok\",\"url\":\"$URL\",\"token_masked\":\"$MASKED\",\"has_token\":$HAS_TOK}"
     exit 0
 fi
 

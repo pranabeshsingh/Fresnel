@@ -87,14 +87,24 @@ Ensure your computer is connected to the modem's local network (default IP: `172
 ```bash
 cd modem
 chmod +x deploy_modem.sh
+
+# Standalone deployment (telemetry disabled, 0% cloud overhead):
+./deploy_modem.sh --no-telemetry 172.16.10.1 root
+
+# Or deploy with remote VPS telemetry enabled:
+./deploy_modem.sh --telemetry --telemetry-url "https://modem.yourvps.com:8000" --telemetry-token "your_token" 172.16.10.1 root
+
+# Or simply run without flags for an interactive setup prompt:
 ./deploy_modem.sh 172.16.10.1 root
 ```
 
 The script will:
 - Create required directories on writeable partitions (`/usrdata` and `/data`).
 - Deploy the high-performance telemetry daemon and web interface.
+- Configure remote telemetry according to your selection (defaults to disabled/standalone mode with zero background CPU/network overhead).
 - Set up permissions and start supervisor watchdogs.
 - Access the web interface at **`http://172.16.10.1:8080/login.html`** (Default password: `admin`).
+- Telemetry can be toggled or configured at any time directly in the web GUI under **Network Services & Privacy Suite** or via SSH CLI (`/usrdata/simpleadmin/scripts/telemetry_ctl.sh {status|enable|disable|config}`).
 
 ### 2. Enable Active Queue Management (AQM) for Bufferbloat Elimination
 

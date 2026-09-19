@@ -1,11 +1,35 @@
 #!/bin/sh
 # 5G Modem Agent & Telemetry Pusher
 CONF_FILE="/data/simpleadmin/telemetry.conf"
-if [ -f "$CONF_FILE" ]; then
-    . "$CONF_FILE"
+STATE_FILE="/data/simpleadmin/services_state.json"
+
+# 1. State check: Verify telemetry is enabled in services_state.json
+TEL_EN=$(grep -o '"telemetry_enabled": *[0-9]*' "$STATE_FILE" 2>/dev/null | tr -cd '0-9')
+[ -z "$TEL_EN" ] && TEL_EN=0
+if [ "$TEL_EN" = "0" ]; then
+    exit 0
 fi
-BASE_URL="${TELEMETRY_BASE_URL:-https://modem.example.com}"
-TOKEN="${TELEMETRY_TOKEN:-your_telemetry_secret_token}"
+
+# 2. Config check: Verify telemetry.conf exists and is not set to disabled
+if [ ! -f "$CONF_FILE" ]; then
+    exit 0
+fi
+. "$CONF_FILE"
+
+if [ "$TELEMETRY_ENABLED" = "0" ]; then
+    exit 0
+fi
+
+# 3. Target URL check: Validate real endpoint is configured (not placeholder)
+BASE_URL="${TELEMETRY_BASE_URL}"
+TOKEN="${TELEMETRY_TOKEN}"
+
+if [ -z "$BASE_URL" ] || \
+   [ "$BASE_URL" = "https://modem.example.com" ] || \
+   [ "$BASE_URL" = "https://your-vps-domain.com" ]; then
+    exit 0
+fi
+
 CURL="/usrdata/simpleadmin/bin/curl"
 DATA_FILE="/tmp/dashboard_data.json"
 LOCK_FILE="/tmp/smd7.lock"
@@ -276,8 +300,12 @@ while true; do
         done
     fi
 
-    # 3. Periodically Sync SMS (every ~30s / 6 loops @ 5s each)
+    # 3. Periodically Sync SMS (every ~30s / 6 loops @ 5s each) and check dynamic state
     if [ $((LOOP_COUNT % 6)) -eq 0 ]; then
+        CUR_EN=$(grep -o '"telemetry_enabled": *[0-9]*' "$STATE_FILE" 2>/dev/null | tr -cd '0-9')
+        if [ "$CUR_EN" = "0" ]; then
+            exit 0
+        fi
         sync_sms &
     fi
 

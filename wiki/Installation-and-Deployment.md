@@ -33,9 +33,23 @@ The Fresnel repository provides an automated SSH streaming deployment script in 
 cd modem
 chmod +x deploy_modem.sh
 
-# Usage: ./deploy_modem.sh [modem_ip] [ssh_user]
+# Option 1: Standalone Deployment (Remote Telemetry Disabled - Default)
+./deploy_modem.sh --no-telemetry 172.16.10.1 root
+
+# Option 2: Deploy with Remote VPS Telemetry Enabled
+./deploy_modem.sh --telemetry --telemetry-url "https://modem.yourvps.com:8000" --telemetry-token "secret_token" 172.16.10.1 root
+
+# Option 3: Interactive Prompt (Prompts [y/N] on terminal)
 ./deploy_modem.sh 172.16.10.1 root
 ```
+
+#### CLI Deployment Flags:
+| Flag | Description |
+|---|---|
+| `--no-telemetry`, `--skip-telemetry` | Disables remote telemetry pusher (`telemetry_enabled: 0`, 0% background resource load). |
+| `--telemetry`, `--enable-telemetry` | Enables remote telemetry pusher daemon. |
+| `--telemetry-url <URL>` | Specifies remote VPS URL (e.g. `https://modem.yourvps.com:8000`). |
+| `--telemetry-token <TOKEN>` | Specifies Bearer authentication token for VPS ingestion. |
 
 ### What the Script Executes:
 
@@ -48,11 +62,15 @@ chmod +x deploy_modem.sh
    - `/data/simpleadmin/data`: Persistent user passwords, band lock masks, and local SQLite state.
    - `/tmp/gw_sessions`: Session token storage (permissions `700`).
 3. **Asset Streaming**: Streams scripts and frontend files over SSH.
-4. **Permissions & Symlinks**: Sets executable permissions (`chmod +x`) on all daemons and CGI scripts.
+4. **Permissions & Service State Configuration**:
+   - Sets executable permissions (`chmod +x`) on all daemons, CGI scripts, and `/usrdata/simpleadmin/scripts/telemetry_ctl.sh`.
+   - Initializes `/data/simpleadmin/services_state.json` with `"telemetry_enabled": 0` (or `1`).
+   - Initializes or updates `/data/simpleadmin/telemetry.conf`.
 5. **Daemon Launch**: Kills stale processes and launches `simpleadmin_daemon.sh` as a detached supervisor watchdog:
    ```bash
    nohup /usrdata/simpleadmin/scripts/simpleadmin_daemon.sh >/tmp/simpleadmin_daemon.log 2>&1 &
    ```
+   *(If telemetry is disabled, `telemetry_pusher.sh` is terminated and never spawned by the supervisor).*
 
 ---
 
