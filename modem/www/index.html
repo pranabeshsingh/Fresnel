@@ -870,7 +870,7 @@
         /* Dedicated Host Link & Tower Diagnostics Box */
         .diag-box-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 14px;
         }
 
@@ -1331,8 +1331,8 @@
             </div>
 
             <div class="header-actions">
-                <a href="https://modem.trylocalhost.com/" target="_blank" rel="noopener noreferrer" class="cloud-hub-pill" title="Open VPS Cloud Telemetry Hub in new tab">
-                    🌐 Cloud Hub ↗
+                <a href="#" id="hdr-cloud-hub-link" target="_blank" rel="noopener noreferrer" class="cloud-hub-pill" title="Remote Cloud Telemetry Hub" onclick="handleCloudHubClick(event)">
+                    <span id="hdr-cloud-hub-text">🌐 Cloud Hub ↗</span>
                 </a>
                 <div class="stream-control-pill" title="Live Stream Polling Frequency">
                     <span id="stream-dot" class="stream-dot"></span>
@@ -1664,6 +1664,32 @@
                         <label class="glass-toggle">
                             <input type="checkbox" id="chk-toggle-adblock" checked onchange="toggleService('adblock', this.checked)">
                             <span class="glass-toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Remote Cloud Telemetry Box -->
+                <div class="diag-subcard" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div class="diag-subcard-title" style="margin-bottom: 0;">📡 Remote Cloud Telemetry</div>
+                            <span id="badge-telemetry-status" class="service-pill stopped">Disabled</span>
+                        </div>
+                        <div class="diag-subcard-val" id="txt-telemetry-host" style="font-size: 15px; color: var(--accent);">
+                            Standalone Mode
+                        </div>
+                        <div class="diag-subcard-desc" id="txt-telemetry-desc" style="margin-top: 4px;">
+                            Pushes live signal &amp; SMS alerts to central VPS dashboard
+                        </div>
+                    </div>
+                    <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <button class="btn-service-action" onclick="openTelemetryConfigModal()">
+                            <span>⚙️</span> Configure
+                        </button>
+                        <label class="glass-toggle">
+                            <input type="checkbox" id="chk-toggle-telemetry" onchange="toggleService('telemetry', this.checked)">
+                            <span class="glass-toggle-slider"></span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -2038,6 +2064,31 @@
 
             <div class="modal-actions">
                 <button class="btn-modal btn-cancel" onclick="closeModeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remote Cloud Telemetry Modal -->
+    <div class="modal-overlay" id="modal-telemetry-config">
+        <div class="modal-card">
+            <div class="modal-title">📡 Remote Cloud Telemetry Settings</div>
+            <div class="modal-desc">Configure your remote VPS Telemetry server to stream live baseband metrics, receive Telegram SMS alerts, and execute remote AT commands.</div>
+
+            <div style="background: var(--pill-bg); border: 1px solid var(--liquid-border); border-radius: 16px; padding: 18px; margin-bottom: 18px;">
+                <div style="margin-bottom: 14px;">
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">VPS Base URL</label>
+                    <input type="text" id="input-telemetry-url" class="modal-input" placeholder="https://modem.yourvps.com:8000" style="margin-bottom: 0; font-family: monospace; font-size: 13px;">
+                </div>
+
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Telemetry Bearer Token</label>
+                    <input type="password" id="input-telemetry-token" class="modal-input" placeholder="Enter bearer auth token" style="margin-bottom: 0; font-family: monospace; font-size: 13px;">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeTelemetryConfigModal()">Cancel</button>
+                <button class="btn-modal btn-primary" onclick="saveTelemetryConfig()">Save &amp; Apply</button>
             </div>
         </div>
     </div>
@@ -2456,6 +2507,22 @@
                 } finally {
                     setTimeout(() => { isTogglingAdblock = false; fetchDashboard(); }, 1000);
                 }
+            } else if (service === 'telemetry') {
+                isTogglingTelemetry = true;
+                const desc = document.getElementById('txt-telemetry-desc');
+                if (desc) desc.textContent = enable ? 'Starting remote VPS telemetry pusher...' : 'Stopping telemetry & freeing CPU...';
+                try {
+                    const res = await fetch(`/cgi-bin/modem_action?action=toggle_telemetry&state=${state}&token=${authToken}`);
+                    const data = await res.json();
+                    showToast(data.message || (enable ? 'Telemetry enabled' : 'Telemetry disabled'));
+                    if (data.warning === 'unconfigured') {
+                        openTelemetryConfigModal();
+                    }
+                } catch (e) {
+                    showToast('Failed to toggle telemetry', true);
+                } finally {
+                    setTimeout(() => { isTogglingTelemetry = false; fetchDashboard(); }, 1200);
+                }
             }
         }
 
@@ -2627,6 +2694,64 @@
                         if (adbCount) adbCount.textContent = 'Ad-Blocker Inactive';
                         if (adbDesc) adbDesc.textContent = 'All DNS queries passing through unfiltered';
                         if (!isTogglingAdblock) adbChk.checked = false;
+                    }
+                }
+
+                // Remote VPS Telemetry State
+                const tel = d.services.telemetry || {};
+                const telBadge = document.getElementById('badge-telemetry-status');
+                const telHost = document.getElementById('txt-telemetry-host');
+                const telDesc = document.getElementById('txt-telemetry-desc');
+                const telChk = document.getElementById('chk-toggle-telemetry');
+                const cloudHubPill = document.getElementById('hdr-cloud-hub-link');
+                const cloudHubText = document.getElementById('hdr-cloud-hub-text');
+
+                if (telBadge && telChk) {
+                    if (tel.enabled && tel.running) {
+                        telBadge.className = 'service-pill active';
+                        telBadge.textContent = 'Streaming';
+                        if (telHost) {
+                            try {
+                                const u = new URL(tel.url);
+                                telHost.textContent = u.hostname;
+                            } catch (e) {
+                                telHost.textContent = tel.url || 'Connected';
+                            }
+                        }
+                        if (telDesc) telDesc.textContent = 'Active streaming • Push every 5s';
+                        if (!isTogglingTelemetry) telChk.checked = true;
+                        if (cloudHubPill) {
+                            cloudHubPill.href = tel.url || '#';
+                            cloudHubPill.style.opacity = '1';
+                            cloudHubPill.title = 'Open VPS Cloud Telemetry Hub';
+                        }
+                        if (cloudHubText) cloudHubText.textContent = '🌐 Cloud Hub ↗';
+                    } else if (tel.enabled && !tel.running) {
+                        telBadge.className = 'service-pill stopped';
+                        telBadge.style.color = '#fb923c';
+                        telBadge.textContent = 'Unconfigured';
+                        if (telHost) telHost.textContent = 'Endpoint Missing';
+                        if (telDesc) telDesc.textContent = 'Configure VPS URL & token to begin streaming';
+                        if (!isTogglingTelemetry) telChk.checked = true;
+                        if (cloudHubPill) {
+                            cloudHubPill.href = '#';
+                            cloudHubPill.style.opacity = '0.65';
+                            cloudHubPill.title = 'Configure Telemetry VPS';
+                        }
+                        if (cloudHubText) cloudHubText.textContent = '🌐 Cloud: Setup';
+                    } else {
+                        telBadge.className = 'service-pill stopped';
+                        telBadge.style.color = '';
+                        telBadge.textContent = 'Disabled';
+                        if (telHost) telHost.textContent = 'Standalone Mode';
+                        if (telDesc) telDesc.textContent = 'No outgoing telemetry • 0% resource usage';
+                        if (!isTogglingTelemetry) telChk.checked = false;
+                        if (cloudHubPill) {
+                            cloudHubPill.href = '#';
+                            cloudHubPill.style.opacity = '0.45';
+                            cloudHubPill.title = 'Remote Telemetry Disabled (click to configure)';
+                        }
+                        if (cloudHubText) cloudHubText.textContent = '🌐 Cloud: Off';
                     }
                 }
             }
@@ -3328,6 +3453,59 @@
             fetchAutoRebootConfig();
         }
         function closeAutoRebootModal() { document.getElementById('modal-auto-reboot').classList.remove('open'); }
+
+        // Remote VPS Telemetry Modal & Handlers
+        let isTogglingTelemetry = false;
+        function handleCloudHubClick(e) {
+            const link = document.getElementById('hdr-cloud-hub-link');
+            if (!link || link.getAttribute('href') === '#' || link.getAttribute('href') === '') {
+                e.preventDefault();
+                openTelemetryConfigModal();
+            }
+        }
+
+        function openTelemetryConfigModal() {
+            document.getElementById('modal-telemetry-config').classList.add('open');
+            fetchTelemetryConfig();
+        }
+        function closeTelemetryConfigModal() {
+            document.getElementById('modal-telemetry-config').classList.remove('open');
+        }
+
+        async function fetchTelemetryConfig() {
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=get_telemetry_config&token=${authToken}`);
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    document.getElementById('input-telemetry-url').value = d.url || '';
+                    document.getElementById('input-telemetry-token').value = '';
+                    if (d.has_token) {
+                        document.getElementById('input-telemetry-token').placeholder = `Configured (${d.token_masked}) - leave blank to keep`;
+                    } else {
+                        document.getElementById('input-telemetry-token').placeholder = 'Enter Bearer Token';
+                    }
+                }
+            } catch(e) {}
+        }
+
+        async function saveTelemetryConfig() {
+            const url = document.getElementById('input-telemetry-url').value.trim();
+            const tok = document.getElementById('input-telemetry-token').value.trim();
+            closeTelemetryConfigModal();
+            showToast('Saving telemetry settings...');
+            try {
+                let query = `/cgi-bin/modem_action?action=set_telemetry_config&url=${encodeURIComponent(url)}&token=${authToken}`;
+                if (tok) {
+                    query += `&telemetry_token=${encodeURIComponent(tok)}`;
+                }
+                const res = await fetch(query);
+                const d = await res.json();
+                showToast(d.message || 'Telemetry settings saved');
+                fetchDashboard(true);
+            } catch(e) {
+                showToast('Failed to save telemetry settings', true);
+            }
+        }
 
         async function fetchAutoRebootConfig() {
             try {
