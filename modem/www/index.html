@@ -114,7 +114,7 @@
 
         .container {
             width: 100%;
-            max-width: 1060px;
+            max-width: 1380px;
             display: flex;
             flex-direction: column;
             gap: 22px;
@@ -222,6 +222,66 @@
             font-weight: 600;
             color: var(--text-muted);
             box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+
+        .cloud-hub-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            border-radius: 30px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            font-size: 12px;
+            font-weight: 700;
+            color: #38bdf8;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+        }
+        .cloud-hub-pill:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+            transform: translateY(-1px);
+        }
+
+        .stream-control-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 30px;
+            background: var(--pill-bg);
+            border: 1px solid var(--liquid-border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+        }
+        .stream-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 6px #10b981;
+            transition: all 0.2s ease;
+        }
+        .stream-dot.paused {
+            background: #f59e0b;
+            box-shadow: 0 0 6px #f59e0b;
+        }
+        .stream-select {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+        }
+        .stream-select option {
+            background: #0f172a;
+            color: #f8fafc;
         }
 
         .status-pill {
@@ -865,15 +925,15 @@
             border-color: rgba(16, 185, 129, 0.35);
         }
 
-        /* Actions Grid (7 items) */
+        /* Actions Grid (8 items) */
         .actions-grid {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(8, minmax(0, 1fr));
             gap: 10px;
             margin-top: 10px;
         }
 
-        @media (max-width: 990px) {
+        @media (max-width: 1200px) {
             .actions-grid {
                 grid-template-columns: repeat(4, 1fr);
             }
@@ -1275,6 +1335,18 @@
             </div>
 
             <div class="header-actions">
+                <a href="https://modem.trylocalhost.com/" target="_blank" rel="noopener noreferrer" class="cloud-hub-pill" title="Open VPS Cloud Telemetry Hub in new tab">
+                    🌐 Cloud Hub ↗
+                </a>
+                <div class="stream-control-pill" title="Live Stream Polling Frequency">
+                    <span id="stream-dot" class="stream-dot"></span>
+                    <select id="sel-poll-rate" class="stream-select" onchange="changePollRate(this.value)" aria-label="Polling interval">
+                        <option value="1500">1.5s (Fast)</option>
+                        <option value="3000">3.0s (Eco)</option>
+                        <option value="5000">5.0s (Idle)</option>
+                        <option value="0">⏸ Pause</option>
+                    </select>
+                </div>
                 <div class="uptime-pill" id="hdr-uptime">⏱️ Uptime: --</div>
                 <div class="status-pill">
                     <span class="status-dot" id="dot-status"></span>
@@ -2261,26 +2333,30 @@
             return bps + ' bps';
         }
 
+        let renderChartRaf = null;
         function renderAllCharts() {
-            const peakThroughput = Math.max(...downHistory, ...upHistory, 1000000);
-            drawSoftSpline('speedChart', [
-                { data: downHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)', lineWidth: 2.8 },
-                { data: upHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.20)', lineWidth: 2.4 }
-            ], { min: 0, max: peakThroughput * 1.15, showGrid: true, padTop: 18, padBottom: 18, topLabel: formatBpsLabel(peakThroughput * 1.15) });
+            if (renderChartRaf) cancelAnimationFrame(renderChartRaf);
+            renderChartRaf = requestAnimationFrame(() => {
+                const peakThroughput = Math.max(...downHistory, ...upHistory, 1000000);
+                drawSoftSpline('speedChart', [
+                    { data: downHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)', lineWidth: 2.8 },
+                    { data: upHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.20)', lineWidth: 2.4 }
+                ], { min: 0, max: peakThroughput * 1.15, showGrid: true, padTop: 18, padBottom: 18, topLabel: formatBpsLabel(peakThroughput * 1.15) });
 
-            drawSoftSpline('cpuChart', [{ data: cpuHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
-            drawSoftSpline('ramChart', [{ data: ramHistory, strokeColor: '#8b5cf6', fillColor: 'rgba(139, 92, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
-            drawSoftSpline('diskChart', [{ data: diskHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)' }], { min: 0, max: 20, padTop: 10, padBottom: 10 });
-            drawSoftSpline('tempChart', [{ data: tempHistory, strokeColor: '#f59e0b', fillColor: 'rgba(245, 158, 11, 0.25)' }], { min: 25, max: 60, padTop: 10, padBottom: 10 });
+                drawSoftSpline('cpuChart', [{ data: cpuHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
+                drawSoftSpline('ramChart', [{ data: ramHistory, strokeColor: '#8b5cf6', fillColor: 'rgba(139, 92, 246, 0.25)' }], { min: 0, max: 100, padTop: 10, padBottom: 10 });
+                drawSoftSpline('diskChart', [{ data: diskHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.25)' }], { min: 0, max: 20, padTop: 10, padBottom: 10 });
+                drawSoftSpline('tempChart', [{ data: tempHistory, strokeColor: '#f59e0b', fillColor: 'rgba(245, 158, 11, 0.25)' }], { min: 25, max: 60, padTop: 10, padBottom: 10 });
 
-            drawSoftSpline('signalChart', [
-                { data: signalHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.2)', lineWidth: 2.2 }
-            ], { min: -125, max: -65, showGrid: true, padTop: 12, padBottom: 14, topLabel: '-65 dBm' });
+                drawSoftSpline('signalChart', [
+                    { data: signalHistory, strokeColor: '#10b981', fillColor: 'rgba(16, 185, 129, 0.2)', lineWidth: 2.2 }
+                ], { min: -125, max: -65, showGrid: true, padTop: 12, padBottom: 14, topLabel: '-65 dBm' });
 
-            const peakPing = Math.max(...pingHistory, 80);
-            drawSoftSpline('pingChart', [
-                { data: pingHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.2)', lineWidth: 2.2 }
-            ], { min: 0, max: peakPing * 1.2, showGrid: true, padTop: 12, padBottom: 14, topLabel: Math.round(peakPing * 1.2) + ' ms' });
+                const peakPing = Math.max(...pingHistory, 80);
+                drawSoftSpline('pingChart', [
+                    { data: pingHistory, strokeColor: '#3b82f6', fillColor: 'rgba(59, 130, 246, 0.2)', lineWidth: 2.2 }
+                ], { min: 0, max: peakPing * 1.2, showGrid: true, padTop: 12, padBottom: 14, topLabel: Math.round(peakPing * 1.2) + ' ms' });
+            });
         }
 
         window.addEventListener('resize', renderAllCharts);
@@ -2374,8 +2450,17 @@
             }
         }
 
+        let isFetching = false;
+        let pollInterval = parseInt(localStorage.getItem('fresnel_poll_interval') || '1500', 10);
+        let pollTimer = null;
+        let isTabHidden = false;
+
         // Main Dashboard Poller
-        async function fetchDashboard() {
+        async function fetchDashboard(force = false) {
+            if (isFetching) return;
+            if (pollInterval === 0 && !force) return; // Paused unless explicitly forced
+
+            isFetching = true;
             try {
                 const res = await fetch(`/cgi-bin/get_dashboard?token=${authToken}&t=` + Date.now());
                 if (res.status === 401) {
@@ -2393,8 +2478,53 @@
                 console.error('Fetch error:', err);
                 document.getElementById('dot-status').classList.add('offline');
                 document.getElementById('txt-status').textContent = 'Connecting...';
+            } finally {
+                isFetching = false;
             }
         }
+
+        function scheduleNextPoll() {
+            if (pollTimer) clearTimeout(pollTimer);
+            if (pollInterval === 0) return; // Manually paused
+
+            // If browser tab is in background/hidden, throttle to 20s to drastically reduce modem CPU load!
+            const effectiveDelay = isTabHidden ? Math.max(pollInterval, 20000) : pollInterval;
+            pollTimer = setTimeout(async () => {
+                await fetchDashboard();
+                scheduleNextPoll();
+            }, effectiveDelay);
+        }
+
+        function changePollRate(val) {
+            pollInterval = parseInt(val, 10);
+            localStorage.setItem('fresnel_poll_interval', pollInterval);
+            const dot = document.getElementById('stream-dot');
+            if (dot) {
+                if (pollInterval === 0) {
+                    dot.classList.add('paused');
+                } else {
+                    dot.classList.remove('paused');
+                }
+            }
+            if (pollTimer) clearTimeout(pollTimer);
+            if (pollInterval > 0) {
+                fetchDashboard(true);
+                scheduleNextPoll();
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                isTabHidden = true;
+                scheduleNextPoll();
+            } else {
+                isTabHidden = false;
+                if (pollInterval > 0) {
+                    fetchDashboard(true);
+                    scheduleNextPoll();
+                }
+            }
+        });
 
         function updateUI(d) {
             const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -3258,12 +3388,20 @@
         // Init
         document.getElementById('btn-refresh').addEventListener('click', () => {
             showToast('Refreshing...');
-            fetchDashboard();
+            fetchDashboard(true);
         });
 
+        // Initialize polling select dropdown from stored preference
+        const pollSelect = document.getElementById('sel-poll-rate');
+        if (pollSelect) {
+            pollSelect.value = String(pollInterval);
+            const dot = document.getElementById('stream-dot');
+            if (dot && pollInterval === 0) dot.classList.add('paused');
+        }
+
         setTimeout(renderAllCharts, 50);
-        fetchDashboard();
-        setInterval(fetchDashboard, 1500);
+        fetchDashboard(true);
+        scheduleNextPoll();
     </script>
 </body>
 </html>

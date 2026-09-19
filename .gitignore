@@ -18,6 +18,8 @@ data/
 __pycache__/
 *.pyc
 .DS_Store
+.venv/
+venv/
 
 # Session state
 gw_sessions/
