@@ -1,0 +1,84 @@
+name: CI Tests & Validation
+
+on:
+  push:
+    branches: [ main, 'feat/**', 'fix/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-and-test:
+    name: Syntax Validation & Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Validate Shell Scripts Syntax
+        run: |
+          echo "=== Checking Shell Syntax (bash -n) ==="
+          for file in modem/deploy_modem.sh \
+                      modem/scripts/*.sh \
+                      modem/www/cgi-bin/modem_action; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              bash -n "$file"
+            fi
+          done
+
+      - name: Validate Perl Scripts Syntax
+        run: |
+          echo "=== Checking Perl Syntax (perl -c) ==="
+          for file in modem/scripts/*.pl; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              perl -c "$file"
+            fi
+          done
+
+      - name: Validate Python Scripts Compilation
+        run: |
+          echo "=== Checking Python Compilation ==="
+          python3 -m py_compile server/db.py server/server_sqlite.py modem/scripts/doAT.py
+
+      - name: Validate HTML Markup Integrity
+        run: |
+          echo "=== Checking HTML Parsing ==="
+          python3 -c "
+          import html.parser
+          for fpath in ['modem/www/index.html', 'modem/www/login.html']:
+              with open(fpath, 'r', encoding='utf-8') as f:
+                  html.parser.HTMLParser().feed(f.read())
+              print(f'Valid HTML: {fpath}')
+          "
+
+      - name: Run Installer Tests
+        run: |
+          echo "=== Running Installer Parsing Tests ==="
+          bash tests/test_deploy_modem.sh
+
+      - name: Run Telemetry Daemon & Early-Exit Tests
+        run: |
+          echo "=== Running Telemetry Daemon Tests ==="
+          bash tests/test_telemetry_daemons.sh
+
+      - name: Run Telemetry CLI Control Tests
+        run: |
+          echo "=== Running Telemetry CLI Tests ==="
+          bash tests/test_telemetry_ctl.sh
+
+      - name: Run Metrics Poller Integration Tests
+        run: |
+          echo "=== Running Metrics Poller Tests ==="
+          perl tests/test_dashboard_telemetry.pl
+
+      - name: Run CGI Endpoint Tests
+        run: |
+          echo "=== Running CGI Action Tests ==="
+          bash tests/test_cgi_telemetry.sh
