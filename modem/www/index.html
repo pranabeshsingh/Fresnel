@@ -928,21 +928,17 @@
         /* Actions Grid (8 items) */
         .actions-grid {
             display: grid;
-            grid-template-columns: repeat(8, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
             gap: 10px;
             margin-top: 10px;
         }
 
-        @media (max-width: 1200px) {
-            .actions-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        @media (max-width: 600px) {
-            .actions-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .btn-beeper-active {
+            background: rgba(16, 185, 129, 0.25) !important;
+            border-color: #10b981 !important;
+            color: #34d399 !important;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.45) !important;
+            animation: pulse 1.2s infinite;
         }
 
         .btn-action {
@@ -1419,6 +1415,11 @@
                     <span>📈</span> Real-Time Throughput
                 </div>
                 <div class="graph-legend">
+                    <div class="legend-item" title="Data accumulated in current session (Click to reset)" style="cursor: pointer; background: var(--pill-bg); padding: 3px 10px; border-radius: 12px; border: 1px solid var(--liquid-border);" onclick="resetSessionDataCounter()">
+                        <span style="color: var(--text-dim); font-size: 11px;">Session:</span>
+                        <span id="txt-session-data" style="color: var(--text-main); font-weight: 700; font-size: 11px;">↓ 0 B • ↑ 0 B</span>
+                        <span style="font-size: 10px; color: var(--text-muted); opacity: 0.8;" title="Reset Counter">↺</span>
+                    </div>
                     <div class="legend-item"><div class="legend-dot down"></div> <span id="val-cur-down">↓ 0 bps</span></div>
                     <div class="legend-item"><div class="legend-dot up"></div> <span id="val-cur-up">↑ 0 bps</span></div>
                 </div>
@@ -1531,11 +1532,12 @@
                     <canvas id="pingChart" class="soft-canvas"></canvas>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; gap: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 8px; flex-wrap: wrap; gap: 6px;">
                     <span>VPS: <b id="txt-ping-vps" style="color: var(--primary);">-- ms</b></span>
                     <span>CF: <b id="txt-ping-cf" style="color: var(--text-main);">-- ms</b></span>
                     <span>Google: <b id="txt-ping-gg" style="color: var(--text-main);">-- ms</b></span>
                     <span>DNS: <b id="txt-dns-profile-lbl" style="color: var(--accent);">Auto</b></span>
+                    <span>Jitter: <b id="txt-jitter-grade" style="color: var(--accent);">-- ms (Grade A+)</b></span>
                 </div>
             </div>
         </div>
@@ -1576,7 +1578,12 @@
                     <div class="card-title">
                         <span>🗼</span> 5G Tower & Antenna Alignment
                     </div>
-                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;" id="txt-radio-state">5G SA Connected</span>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <button class="btn-service-action" id="btn-antenna-beeper" onclick="toggleAntennaBeeper()" title="Acoustic Signal Tuner (Pitch rises with 5G signal quality)">
+                            <span>📡</span> <span id="txt-beeper-btn">Audio Beeper: OFF</span>
+                        </button>
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;" id="txt-radio-state">5G SA Connected</span>
+                    </div>
                 </div>
 
                 <div class="diag-box-grid">
@@ -1680,6 +1687,9 @@
                 <button class="btn-action" onclick="openModeModal()">
                     <span>🎛️</span> <b>Band & Mode</b>
                 </button>
+                <button class="btn-action" onclick="confirmCellularReattach()" style="border-color: rgba(251, 146, 60, 0.35); color: #fb923c;">
+                    <span>🔄</span> <b>Soft Re-attach</b>
+                </button>
                 <button class="btn-action" onclick="openAutoRebootModal()">
                     <span>⏰</span> <b>Auto-Reboot</b>
                 </button>
@@ -1704,6 +1714,12 @@
             </button>
 
             <div class="accordion-content" id="adv-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Hardware Register &amp; Cellular Signal Telemetry</span>
+                    <button class="btn-service-action" onclick="copyDiagnosticReport()">
+                        <span>📋</span> <b>Copy Diagnostics Snapshot</b>
+                    </button>
+                </div>
                 <div class="adv-grid">
                     <div class="adv-item"><div class="adv-k">Active Bands</div><div class="adv-v" id="adv-bands">--</div></div>
                     <div class="adv-item"><div class="adv-k">5G RSRP (NR5G)</div><div class="adv-v" id="adv-nr-rsrp">--</div></div>
@@ -2740,6 +2756,200 @@
             if (d.sim_security) {
                 updateSimSecUI(d.sim_security);
             }
+
+            // Real-Time Bufferbloat & Jitter Grade Meter
+            updateJitterMetrics(d.ping?.vps_ms || d.ping?.cloudflare_ms || 35);
+
+            // Active Browsing Session Data Accumulator
+            updateSessionData(d.speed?.download_bps || 0, d.speed?.upload_bps || 0);
+
+            // Update RF metrics for Audio Signal Tuner (Beeper)
+            const parsedRsrp = parseFloat(d.advanced?.nr_rsrp || d.advanced?.rsrp || d.tower_cell?.rsrp || '-90');
+            if (!isNaN(parsedRsrp)) latestRsrp = parsedRsrp;
+            const parsedSinr = parseFloat(d.advanced?.sinr || d.tower_cell?.sinr || '15');
+            if (!isNaN(parsedSinr)) latestSinr = parsedSinr;
+
+            // Dynamic Browser Tab Title with Live Telemetry
+            if (isOnline) {
+                const netTag = d.connection?.network_type || '5G SA';
+                const rsrpVal = d.advanced?.nr_rsrp || d.advanced?.rsrp || '-90 dBm';
+                const dlSpeed = d.speed?.download_speed || '0 bps';
+                document.title = `[${netTag} • ${rsrpVal} • ↓ ${dlSpeed}] Fresnel`;
+            } else {
+                document.title = `[Offline] Fresnel Gateway`;
+            }
+        }
+
+        // 1. Session Data Counter (Active Browsing Rx/Tx Volume)
+        let sessionDownBytes = 0;
+        let sessionUpBytes = 0;
+        let lastSpeedTimestamp = 0;
+
+        function updateSessionData(downBps, upBps) {
+            const now = Date.now();
+            if (lastSpeedTimestamp > 0) {
+                const elapsedSec = (now - lastSpeedTimestamp) / 1000;
+                if (elapsedSec > 0 && elapsedSec < 10) {
+                    sessionDownBytes += (downBps / 8) * elapsedSec;
+                    sessionUpBytes += (upBps / 8) * elapsedSec;
+                }
+            }
+            lastSpeedTimestamp = now;
+
+            const formatVol = (bytes) => {
+                if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+                if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+                if (bytes >= 1024) return (bytes / 1024).toFixed(0) + ' KB';
+                return Math.round(bytes) + ' B';
+            };
+
+            setTxt('txt-session-data', `↓ ${formatVol(sessionDownBytes)} • ↑ ${formatVol(sessionUpBytes)}`);
+        }
+
+        function resetSessionDataCounter() {
+            sessionDownBytes = 0;
+            sessionUpBytes = 0;
+            lastSpeedTimestamp = Date.now();
+            setTxt('txt-session-data', '↓ 0 B • ↑ 0 B');
+            showToast('Session data counter reset.');
+        }
+
+        // 2. Real-Time Bufferbloat & Jitter Grade Meter
+        const pingSamples = [];
+        function updateJitterMetrics(currentPing) {
+            const val = parseFloat(currentPing);
+            if (isNaN(val) || val <= 0) return;
+            pingSamples.push(val);
+            if (pingSamples.length > 12) pingSamples.shift();
+            if (pingSamples.length < 3) return;
+
+            let totalDiff = 0;
+            for (let i = 1; i < pingSamples.length; i++) {
+                totalDiff += Math.abs(pingSamples[i] - pingSamples[i - 1]);
+            }
+            const jitter = (totalDiff / (pingSamples.length - 1)).toFixed(1);
+            const el = document.getElementById('txt-jitter-grade');
+            if (!el) return;
+
+            if (jitter < 3.0) {
+                el.textContent = `${jitter} ms (Grade A+)`;
+                el.style.color = '#10b981';
+            } else if (jitter < 8.0) {
+                el.textContent = `${jitter} ms (Grade A)`;
+                el.style.color = '#38bdf8';
+            } else if (jitter < 18.0) {
+                el.textContent = `${jitter} ms (Grade B)`;
+                el.style.color = '#f59e0b';
+            } else {
+                el.textContent = `${jitter} ms (Bufferbloat)`;
+                el.style.color = '#ef4444';
+            }
+        }
+
+        // 3. Audio Antenna Alignment Mode ("Acoustic Signal Tuner")
+        let audioCtx = null;
+        let beeperTimer = null;
+        let isBeeperActive = false;
+        let latestRsrp = -90;
+        let latestSinr = 15;
+
+        function toggleAntennaBeeper() {
+            isBeeperActive = !isBeeperActive;
+            const btn = document.getElementById('btn-antenna-beeper');
+            const txt = document.getElementById('txt-beeper-btn');
+            if (isBeeperActive) {
+                if (!audioCtx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) audioCtx = new AudioContextClass();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                if (btn) btn.classList.add('btn-beeper-active');
+                if (txt) txt.textContent = 'Beeper: ON 🔊';
+                showToast('📡 Audio signal tuner active. Pitch rises with 5G signal quality.');
+                playBeeperTick();
+            } else {
+                if (beeperTimer) clearTimeout(beeperTimer);
+                if (btn) btn.classList.remove('btn-beeper-active');
+                if (txt) txt.textContent = 'Audio Beeper: OFF';
+                showToast('Audio signal tuner stopped.');
+            }
+        }
+
+        function playBeeperTick() {
+            if (!isBeeperActive || !audioCtx) return;
+
+            try {
+                // Frequency maps RSRP (-115 to -65 dBm) -> (320 Hz to 1100 Hz)
+                const clampedRsrp = Math.max(-115, Math.min(-65, latestRsrp));
+                const freq = 320 + ((clampedRsrp - (-115)) / 50) * 780;
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                // Short, clean non-intrusive acoustic pulse
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch (e) {
+                console.warn("WebAudio error:", e);
+            }
+
+            // Interval maps SINR (-5 to 28 dB) -> (750ms slow to 130ms rapid)
+            const clampedSinr = Math.max(-5, Math.min(28, latestSinr));
+            const delay = Math.round(750 - ((clampedSinr - (-5)) / 33) * 620);
+
+            beeperTimer = setTimeout(playBeeperTick, Math.max(120, delay));
+        }
+
+        // 4. Soft Cellular Re-attach (Fast Airplane Mode Toggle)
+        async function confirmCellularReattach() {
+            if (!confirm("Quickly reset cellular RF (AT+CFUN=0/1)?\n\nThis resets the cellular baseband and re-attaches to 5G in ~4 seconds without rebooting the modem OS.")) return;
+            showToast("Initiating cellular soft reset...");
+            try {
+                const res = await fetch(`/cgi-bin/modem_action?action=cellular_reattach&token=${authToken}`);
+                const d = await res.json();
+                if (d.status === 'ok') {
+                    showToast("✅ Baseband re-cycled. Re-attaching to 5G SA...");
+                    setTimeout(() => fetchDashboard(true), 3500);
+                } else {
+                    showToast("Error: " + (d.message || 'Operation failed'), true);
+                }
+            } catch (err) {
+                showToast("Network error: " + err.message, true);
+            }
+        }
+
+        // 5. 1-Click Copy Diagnostics Report
+        function copyDiagnosticReport() {
+            const now = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+            const get = id => (document.getElementById(id)?.textContent || '--').trim();
+
+            const report = `### Fresnel 5G Diagnostics Snapshot
+- **Timestamp**: ${now}
+- **Uptime**: ${get('hdr-uptime').replace('⏱️ Uptime:', '').trim()}
+- **Network State**: ${get('txt-provider')} • ${get('txt-nettype')} (${get('txt-status')})
+- **Active Bands**: ${get('txt-bands-val')}
+- **Serving Cell**: ${get('txt-tower-enb')} • TAC: ${get('txt-tower-tac')} • Channel: ${get('txt-tower-chan')}
+- **Radio Quality**: RSRP: ${get('txt-live-rsrp')} • SINR: ${get('txt-live-sinr')} • CSQ: ${get('txt-live-csq')} • Quality: ${get('txt-live-quality')}
+- **Latency / Jitter**: VPS Ping: ${get('txt-ping-vps')} • Cloudflare: ${get('txt-ping-cf')} • Jitter: ${get('txt-jitter-grade')}
+- **Throughput**: ${get('val-cur-down')} • ${get('val-cur-up')} • Session: ${get('txt-session-data')}
+- **Hardware Resources**: CPU: ${get('val-cpu-pct')} • RAM: ${get('txt-ram-used')} • Flash: ${get('txt-disk-used')} • Temp: ${get('val-5g-temp')}
+- **Baseband / Device**: Model: ${get('adv-model')} • FW: ${get('adv-fw')} • IMEI: ${get('adv-imei')}
+- **Host Link**: IP: ${get('txt-host-ip')} • ${get('txt-host-mac')}`;
+
+            navigator.clipboard.writeText(report).then(() => {
+                showToast('📋 Diagnostics snapshot copied to clipboard!');
+            }).catch(() => {
+                showToast('Could not copy report to clipboard', true);
+            });
         }
 
         // Built-in Speedtest Benchmark

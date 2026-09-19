@@ -30,6 +30,16 @@ if [ "$ACTION" = "reboot" ]; then
     exit 0
 fi
 
+if [ "$ACTION" = "cellular_reattach" ] || [ "$ACTION" = "airplane_toggle" ]; then
+    echo '{"status":"ok","message":"Cellular soft reset initiated. Re-attaching to 5G..."}'
+    (
+        /usrdata/simpleadmin/scripts/doAT.pl "AT+CFUN=0" >/dev/null 2>&1
+        sleep 2
+        /usrdata/simpleadmin/scripts/doAT.pl "AT+CFUN=1" >/dev/null 2>&1
+    ) &
+    exit 0
+fi
+
 if [ "$ACTION" = "set_dns" ]; then
     DNS_PROF=$(get_param "dns")
     mkdir -p /data/simpleadmin
