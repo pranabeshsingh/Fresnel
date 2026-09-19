@@ -213,5 +213,48 @@ To utilize Oracle Autonomous Database:
 
 ---
 
+## 🛠️ Modem-Side Telemetry Management & Controls
+
+Fresnel cellular gateways provide complete autonomy over remote telemetry streaming. Telemetry can be disabled, configured, or uninstalled at any time with zero background resource consumption when inactive.
+
+### 1. Deployment Controls (`deploy_modem.sh`)
+During initial modem deployment, you can choose whether to enable telemetry:
+```bash
+# Standalone mode: disables pusher daemon (0% CPU/network overhead)
+./deploy_modem.sh --no-telemetry 172.16.10.1 root
+
+# Pre-configure and enable cloud telemetry:
+./deploy_modem.sh --telemetry --telemetry-url "https://modem.yourvps.com:8000" --telemetry-token "your_token" 172.16.10.1 root
+```
+
+### 2. Web GUI Controls
+In the modem web dashboard (`http://172.16.10.1:8080`):
+- Navigate to **🛡️ Network Services & Privacy Suite**.
+- **📡 Remote Cloud Telemetry**:
+  - Toggle the switch to instantly enable or disable metric streaming.
+  - Click **⚙️ Configure** to update the VPS Server URL and Bearer Token in a clean modal.
+  - The top header **🌐 Cloud Hub** pill dynamically links to your VPS dashboard when active, or opens the configuration modal when disabled.
+
+### 3. SSH CLI Management (`telemetry_ctl.sh`)
+For command-line administration over SSH, use the dedicated management tool:
+```bash
+# Check status, process PID, and configured endpoint
+/usrdata/simpleadmin/scripts/telemetry_ctl.sh status
+
+# Enable telemetry pusher daemon
+/usrdata/simpleadmin/scripts/telemetry_ctl.sh enable
+
+# Disable telemetry and kill background pusher immediately
+/usrdata/simpleadmin/scripts/telemetry_ctl.sh disable
+
+# Update VPS endpoint URL and authentication token
+/usrdata/simpleadmin/scripts/telemetry_ctl.sh config "https://modem.yourvps.com:8000" "your_bearer_token"
+
+# Full uninstall: disables state and purges pusher scripts/config
+/usrdata/simpleadmin/scripts/telemetry_ctl.sh uninstall
+```
+
+---
+
 Next Step: Set up real-time notifications in [Telegram Alerts & Monitoring](Telegram-Alerts-and-Monitoring).
 
