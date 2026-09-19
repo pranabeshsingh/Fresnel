@@ -1020,10 +1020,11 @@ sub sample_and_emit {
         $firmware_ver = $loaded{firmware} if defined $loaded{firmware};
     }
 
-    # 10. Services State (Tailscale & Ad-Blocker)
+    # 10. Services State (Tailscale, Ad-Blocker, Remote Telemetry)
     my %srv_state = (
         tailscale_enabled => 1,
         adblock_enabled => 1,
+        telemetry_enabled => 0,
         blocked_domains_count => 45000,
         last_updated => "2026-09-01"
     );
@@ -1045,6 +1046,21 @@ sub sample_and_emit {
     my $adblock_running = 0;
     if (-s "/data/simpleadmin/adblock_hosts" && -s "/data/simpleadmin/adblock_hosts" > 100) {
         $adblock_running = 1;
+    }
+
+    my $telemetry_running = 0;
+    if (system("pgrep -f telemetry_pusher.sh >/dev/null 2>&1") == 0) {
+        $telemetry_running = 1;
+    }
+
+    my $telemetry_url = "";
+    if (-f "/data/simpleadmin/telemetry.conf" && open(my $tcf, "<", "/data/simpleadmin/telemetry.conf")) {
+        while (my $line = <$tcf>) {
+            if ($line =~ /^TELEMETRY_BASE_URL=["']?([^"'\r\n]+)["']?/) {
+                $telemetry_url = $1;
+            }
+        }
+        close($tcf);
     }
 
     my $today_total_bytes = ($usage{today_rx} || 0) + ($usage{today_tx} || 0);
@@ -1169,6 +1185,11 @@ sub sample_and_emit {
       "running": $adblock_running,
       "blocked_domains": $srv_state{blocked_domains_count},
       "last_updated": "$srv_state{last_updated}"
+    },
+    "telemetry": {
+      "enabled": $srv_state{telemetry_enabled},
+      "running": $telemetry_running,
+      "url": "$telemetry_url"
     }
   },
   "dns_telemetry": {
