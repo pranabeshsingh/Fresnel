@@ -33,10 +33,31 @@ if ! pidof ntpd >/dev/null; then
     /usr/sbin/ntpd -l -p time.google.com -p time.apple.com -p pool.ntp.org &
 fi
 
-# 6. Start remote VPS Telemetry Pusher (modem.trylocalhost.com)
-if ! pgrep -f 'telemetry_pusher.sh' >/dev/null && [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
-    /usrdata/simpleadmin/scripts/telemetry_pusher.sh &
-fi
+# 6. Check and manage remote VPS Telemetry Pusher
+check_telemetry_pusher() {
+    STATE_FILE="/data/simpleadmin/services_state.json"
+    CONF_FILE="/data/simpleadmin/telemetry.conf"
+    
+    TEL_EN=$(grep -o '"telemetry_enabled": *[0-9]*' "$STATE_FILE" 2>/dev/null | tr -cd '0-9')
+    [ -z "$TEL_EN" ] && TEL_EN=0
+    
+    if [ "$TEL_EN" = "1" ] && [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
+        if [ -f "$CONF_FILE" ]; then
+            URL=$(grep -E '^TELEMETRY_BASE_URL=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            DIS=$(grep -E '^TELEMETRY_ENABLED=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            if [ "$DIS" != "0" ] && [ -n "$URL" ] && [ "$URL" != "https://modem.example.com" ] && [ "$URL" != "https://your-vps-domain.com" ]; then
+                if ! pgrep -f 'telemetry_pusher.sh' >/dev/null; then
+                    /usrdata/simpleadmin/scripts/telemetry_pusher.sh &
+                fi
+                return
+            fi
+        fi
+    fi
+    
+    # If telemetry is disabled or unconfigured, ensure no pusher is running
+    pkill -f 'telemetry_pusher.sh' 2>/dev/null || true
+}
+check_telemetry_pusher
 
 # 7. State-Restoration for Native In-Memory Dnsmasq Ad-Blocker
 STATE_FILE="/data/simpleadmin/services_state.json"
@@ -75,10 +96,8 @@ while true; do
         /usr/sbin/ntpd -l -p time.google.com -p time.apple.com -p pool.ntp.org &
     fi
 
-    # Keep remote telemetry pusher alive
-    if ! pgrep -f 'telemetry_pusher.sh' >/dev/null && [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
-        /usrdata/simpleadmin/scripts/telemetry_pusher.sh &
-    fi
+    # Keep remote telemetry pusher monitored according to state
+    check_telemetry_pusher
 
     # Check auto-reboot schedule (evaluated in IST)
     if [ -f /data/simpleadmin/auto_reboot.json ]; then
