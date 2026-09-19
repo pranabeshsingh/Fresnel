@@ -2210,6 +2210,11 @@
             window.location.replace('/login.html');
         }
 
+        function setTxt(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+
         // History Buffers (25 points each)
         const histLen = 25;
         const downHistory = new Array(histLen).fill(0);
@@ -2527,7 +2532,6 @@
         });
 
         function updateUI(d) {
-            const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
             const isOnline = d.connection?.is_online;
             const dot = document.getElementById('dot-status');
             const statusTxt = document.getElementById('txt-status');
