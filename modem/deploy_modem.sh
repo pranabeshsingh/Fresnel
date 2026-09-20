@@ -98,10 +98,21 @@ ssh ${SSH_OPTS} "${SSH_USER}@${MODEM_IP}" "uname -a" || {
 # Create remote directories on read-write partitions (/usrdata and /data)
 echo "[2/5] Creating remote directories on /usrdata and /data..."
 ssh ${SSH_OPTS} "${SSH_USER}@${MODEM_IP}" "
-    mkdir -p /usrdata/simpleadmin/scripts \
+    # On factory Qualcomm/OpenEmbedded modems, rootfs (/) is mounted Read-Only.
+    # The persistent writable flash partition is mounted at /data.
+    if [ ! -e /usrdata ]; then
+        mount -o remount,rw / 2>/dev/null || true
+        ln -sf /data /usrdata 2>/dev/null || true
+        mount -o remount,ro / 2>/dev/null || true
+    fi
+
+    mkdir -p /data/simpleadmin/scripts \
+             /data/simpleadmin/www/cgi-bin \
+             /data/simpleadmin/bin \
+             /data/simpleadmin/data \
+             /usrdata/simpleadmin/scripts \
              /usrdata/simpleadmin/www/cgi-bin \
              /usrdata/simpleadmin/bin \
-             /data/simpleadmin/data \
              /tmp/gw_sessions
     chmod 700 /tmp/gw_sessions
 "
