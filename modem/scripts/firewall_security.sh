@@ -39,10 +39,10 @@ iptables -t mangle -C POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --cla
 ip6tables -t mangle -C POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu 2>/dev/null || \
     ip6tables -t mangle -A POSTROUTING -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
 
-# 5. Interface TX Queue Optimization (Prevent Packet Drops under 5G Bursts)
+# 5. Interface TX Queue Bufferbloat Elimination (Caps Queuing Latency Spikes)
 for dev in rmnet_data0 bridge0 ecm0 rndis0; do
     if [ -d "/sys/class/net/$dev" ]; then
-        ip link set "$dev" txqueuelen 5000 2>/dev/null
+        ip link set "$dev" txqueuelen 500 2>/dev/null
     fi
 done
 
@@ -51,7 +51,7 @@ sysctl -w net.core.rmem_max=16777216 >/dev/null 2>&1
 sysctl -w net.core.wmem_max=16777216 >/dev/null 2>&1
 sysctl -w net.core.rmem_default=262144 >/dev/null 2>&1
 sysctl -w net.core.wmem_default=262144 >/dev/null 2>&1
-sysctl -w net.core.netdev_max_backlog=5000 >/dev/null 2>&1
+sysctl -w net.core.netdev_max_backlog=1000 >/dev/null 2>&1
 sysctl -w net.ipv4.tcp_rmem="4096 87380 16777216" >/dev/null 2>&1
 sysctl -w net.ipv4.tcp_wmem="4096 65536 16777216" >/dev/null 2>&1
 sysctl -w net.ipv4.tcp_fastopen=3 >/dev/null 2>&1
