@@ -94,7 +94,7 @@ sub run_at {
 
 if ($action eq "set_mode") {
     my $ws46_val = 25;
-    my $preset_name = "Auto (5G/4G)";
+    my $preset_name = "Auto / NSA Mode";
 
     if ($mode eq "5g_only" || $mode eq "5g_n78" || $mode eq "5g_n28") {
         $ws46_val = 30; # 5G NR Only / SA Lock
@@ -103,12 +103,22 @@ if ($action eq "set_mode") {
         $ws46_val = 28; # 4G LTE Only
         $preset_name = "4G LTE Only";
     } else {
-        $ws46_val = 25; # Auto 5G Preferred
-        $preset_name = "Auto 5G Preferred";
+        $ws46_val = 25; # Auto 5G Preferred / NSA Mode
+        $preset_name = "Auto / NSA Mode";
     }
     
     my $res = run_at("AT+WS46=$ws46_val");
     if ($res =~ /OK/) {
+        if ($ws46_val == 28) {
+            # Extract numeric PLMN (e.g. 405861) to lock to LTE AcT 7
+            my $cops = run_at("AT+COPS=3,2;+COPS?");
+            my ($plmn) = $cops =~ /\+COPS:\s*\d+,\d+,"(\d+)"/;
+            $plmn ||= "405861";
+            run_at("AT+COPS=1,2,\"$plmn\",7");
+        } else {
+            # Automatic network selection with specified WS46 preference
+            run_at("AT+COPS=0");
+        }
         print "{\"status\":\"ok\",\"mode\":\"$mode\",\"preset\":\"$preset_name\",\"message\":\"Network mode updated to $preset_name\"}\n";
     } else {
         print "{\"status\":\"error\",\"message\":\"Failed to set network mode\"}\n";
@@ -121,6 +131,11 @@ if ($action eq "set_mode") {
         if ($val == 30) { $cur_mode = "5g_only"; }
         elsif ($val == 28) { $cur_mode = "4g_only"; }
         else { $cur_mode = "auto"; }
+    }
+    # Also verify live COPS registration
+    my $cops_check = run_at("AT+COPS?");
+    if ($cops_check =~ /,\s*7\s*$/ || $cops_check =~ /,\s*7\r?\n/) {
+        $cur_mode = "4g_only";
     }
     print "{\"status\":\"ok\",\"mode\":\"$cur_mode\"}\n";
 }

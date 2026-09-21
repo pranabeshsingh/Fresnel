@@ -430,6 +430,65 @@
             box-shadow: 0 4px 12px var(--accent-glow);
         }
 
+        /* Mode Segmented Control */
+        .mode-selector-container {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--liquid-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .mode-selector-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mode-segmented-control {
+            display: inline-flex;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--liquid-border);
+            border-radius: 20px;
+            padding: 3px;
+            gap: 4px;
+        }
+
+        .mode-pill-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .mode-pill-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .mode-pill-btn.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.4);
+        }
+
         
         /* Glass Toggle Switch */
         .glass-toggle {
@@ -1404,6 +1463,24 @@
                         <div class="signal-bar"></div>
                     </div>
                     <div class="signal-label" id="txt-signal-quality">Good Signal</div>
+                </div>
+            </div>
+
+            <!-- Quick Mode Preference Selector -->
+            <div class="mode-selector-container">
+                <div class="mode-selector-title">
+                    <span>⚡ Mode Preference:</span>
+                </div>
+                <div class="mode-segmented-control" role="group" aria-label="Network Mode Preference">
+                    <button class="mode-pill-btn active" id="btn-mode-auto" onclick="setNetworkMode('auto')" title="Auto Mode: 5G NSA & SA with automatic 4G LTE fallback">
+                        <span class="mode-pill-icon">⚡</span> Auto / NSA
+                    </button>
+                    <button class="mode-pill-btn" id="btn-mode-5g" onclick="setNetworkMode('5g_only')" title="5G Only: Pure Standalone 5G NR Lock">
+                        <span class="mode-pill-icon">🚀</span> 5G Only
+                    </button>
+                    <button class="mode-pill-btn" id="btn-mode-4g" onclick="setNetworkMode('4g_only')" title="4G Only: Forces modem to remain on 4G LTE">
+                        <span class="mode-pill-icon">📱</span> 4G Only
+                    </button>
                 </div>
             </div>
         </div>
@@ -3415,7 +3492,16 @@
             }
         }
 
-        // Mode & Band Lock Modal
+        // Mode & Band Lock Modal & Segmented Pills
+        function updateModePills(cur) {
+            const btnAuto = document.getElementById('btn-mode-auto');
+            const btn5g = document.getElementById('btn-mode-5g');
+            const btn4g = document.getElementById('btn-mode-4g');
+            if (btnAuto) btnAuto.classList.toggle('active', cur === 'auto' || cur === 'auto_nsa');
+            if (btn5g) btn5g.classList.toggle('active', cur === '5g_only' || cur === '5g_n78' || cur === '5g_n28');
+            if (btn4g) btn4g.classList.toggle('active', cur === '4g_only');
+        }
+
         function openModeModal() {
             document.getElementById('modal-mode').classList.add('open');
             fetchCurrentMode();
@@ -3431,19 +3517,25 @@
                     const el = document.getElementById(`mode-check-${m}`);
                     if (el) el.style.display = (m === cur) ? 'inline-block' : 'none';
                 });
+                updateModePills(cur);
             } catch (e) {}
         }
 
         async function setNetworkMode(mode) {
             closeModeModal();
-            showToast('Applying network mode & band lock...');
+            updateModePills(mode);
+            showToast('Switching network mode...');
             try {
                 const res = await fetch(`/cgi-bin/band_lock?action=set_mode&mode=${mode}&token=${authToken}`);
                 const d = await res.json();
                 showToast(d.message || 'Network mode updated');
-                setTimeout(fetchDashboard, 2500);
+                setTimeout(() => {
+                    fetchDashboard(true);
+                    fetchCurrentMode();
+                }, 2000);
             } catch (err) {
                 showToast('Failed to switch network mode', true);
+                fetchCurrentMode();
             }
         }
 
@@ -3793,6 +3885,7 @@
 
         setTimeout(renderAllCharts, 50);
         fetchDashboard(true);
+        fetchCurrentMode();
         scheduleNextPoll();
     </script>
 </body>
