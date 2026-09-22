@@ -5,14 +5,15 @@ cat /etc/profile > /tmp/profile 2>/dev/null && echo 'export TZ="IST-5:30"' >> /t
 cat /etc/environment > /tmp/environment 2>/dev/null && echo 'TZ="IST-5:30"' >> /tmp/environment && mount --bind /tmp/environment /etc/environment 2>/dev/null || true
 export TZ="IST-5:30"
 
-# 1. Disable power-wasting & dead-hardware daemons (GPS, Wi-Fi, Audio, RPC, Diag)
+# 1. Disable power-wasting & dead-hardware daemons (SAR/G-Sensor, GPS, Wi-Fi, Audio, RPC, Diag)
 mkdir -p /run/systemd/system
-for s in loc_launcher.service location_hal_daemon.service start_wlan_services.service qcmap_wlan.service qcmap_wlan_bootup.service csd_server.service init_audio.service audio.service rpcbind.service rpcbind.socket rpcbind.target diag-reboot-app.service ipacmdiag.service chgrp-diag.service; do
+for s in ceisar.service loc_launcher.service location_hal_daemon.service start_wlan_services.service qcmap_wlan.service qcmap_wlan_bootup.service csd_server.service init_audio.service audio.service rpcbind.service rpcbind.socket rpcbind.target diag-reboot-app.service ipacmdiag.service chgrp-diag.service; do
     ln -sf /dev/null /run/systemd/system/$s
 done
 systemctl daemon-reload 2>/dev/null || true
-systemctl stop loc_launcher location_hal_daemon start_wlan_services csd_server rpcbind.socket rpcbind diag-reboot-app ipacmdiag 2>/dev/null || true
-killall -9 loc_launcher location_hal_daemon lowi-server xtra-daemon wlan_services csd_server rpcbind diagrebootapp ipacmdiag 2>/dev/null || true
+systemctl stop ceisar loc_launcher location_hal_daemon start_wlan_services csd_server rpcbind.socket rpcbind diag-reboot-app ipacmdiag 2>/dev/null || true
+killall -9 ceisar loc_launcher location_hal_daemon lowi-server xtra-daemon wlan_services csd_server rpcbind diagrebootapp ipacmdiag 2>/dev/null || true
+echo 0 > /sys/bus/i2c/devices/1-0018/stk8xxx/enable 2>/dev/null || true
 
 # 2. Apply firewall security & TTL rules
 /usrdata/simpleadmin/scripts/firewall_security.sh >/dev/null 2>&1
