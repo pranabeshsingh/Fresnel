@@ -509,8 +509,12 @@ sub sample_and_emit {
         close($uf);
     }
 
-    # 5. Thermals
-    my %thermals = ( cpu => "37°C", mdm_5g => "36°C", pa => "33°C", ipa => "36°C", core_temp_val => 37 );
+    # 5. Thermals & Power Subsystem
+    my %thermals = (
+        cpu => "37°C", mdm_5g => "36°C", pa => "33°C", pa1 => "33°C", pa2 => "33°C",
+        ipa => "36°C", tcxo => "36°C", pmic => "39°C", case => "36°C", ambient => "36°C",
+        core_temp_val => 37
+    );
     if (opendir(my $dh, "/sys/class/thermal")) {
         my @dirs = grep { /^thermal_zone\d+$/ } readdir($dh);
         closedir($dh);
@@ -525,11 +529,36 @@ sub sample_and_emit {
                     my $c = int($val / 1000);
                     if ($type =~ /cpu0/) { $thermals{cpu} = "${c}°C"; $thermals{core_temp_val} = $c; }
                     elsif ($type =~ /mdm-5g/) { $thermals{mdm_5g} = "${c}°C"; }
-                    elsif ($type =~ /pa1/) { $thermals{pa} = "${c}°C"; }
+                    elsif ($type =~ /pa1/) { $thermals{pa} = "${c}°C"; $thermals{pa1} = "${c}°C"; }
+                    elsif ($type =~ /pa2/) { $thermals{pa2} = "${c}°C"; }
                     elsif ($type =~ /ipa/) { $thermals{ipa} = "${c}°C"; }
+                    elsif ($type =~ /xo-therm/) { $thermals{tcxo} = "${c}°C"; }
+                    elsif ($type =~ /pmxprairie/) { $thermals{pmic} = "${c}°C"; }
+                    elsif ($type =~ /sdx-case/) { $thermals{case} = "${c}°C"; }
+                    elsif ($type =~ /ambient-therm/) { $thermals{ambient} = "${c}°C"; }
                 }
             }
         }
+    }
+
+    # 5.1 Power Rail Metrics (PMIC VADC)
+    my $vph_raw = 0;
+    if (open(my $vph_f, "<", "/sys/bus/iio/devices/iio:device0/in_voltage_vph_pwr_input")) {
+        my $val = <$vph_f> || ""; chomp($val); close($vph_f);
+        if ($val =~ /^\d+$/) { $vph_raw = int($val); }
+    }
+    my $vref_raw = 0;
+    if (open(my $vref_f, "<", "/sys/bus/iio/devices/iio:device0/in_voltage_vref_1p25_input")) {
+        my $val = <$vref_f> || ""; chomp($val); close($vref_f);
+        if ($val =~ /^\d+$/) { $vref_raw = int($val); }
+    }
+    my $vph_v = sprintf("%.3f", $vph_raw / 1000000);
+    my $vref_v = sprintf("%.4f", $vref_raw / 1000000);
+    my $power_status = "HEALTHY";
+    if ($vph_v < 3.20) {
+        $power_status = "CRITICAL_SAG";
+    } elsif ($vph_v < 3.30) {
+        $power_status = "MARGINAL";
     }
 
     # 6. WAN IPv4 and IPv6
@@ -1280,7 +1309,18 @@ sub sample_and_emit {
     "cpu": "$thermals{cpu}",
     "mdm_5g": "$thermals{mdm_5g}",
     "pa": "$thermals{pa}",
-    "ipa": "$thermals{ipa}"
+    "pa1": "$thermals{pa1}",
+    "pa2": "$thermals{pa2}",
+    "ipa": "$thermals{ipa}",
+    "tcxo": "$thermals{tcxo}",
+    "pmic": "$thermals{pmic}",
+    "case": "$thermals{case}",
+    "ambient": "$thermals{ambient}"
+  },
+  "power": {
+    "voltage_vph": $vph_v,
+    "voltage_vref": $vref_v,
+    "power_status": "$power_status"
   },
   "host_link": {
     "is_connected": 1,

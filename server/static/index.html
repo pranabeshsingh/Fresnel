@@ -483,6 +483,7 @@
         <!-- Navigation Tabs -->
         <div class="tabs-nav">
             <button class="tab-btn active" onclick="switchTab('telemetry')">📊 Telemetry & KPIs</button>
+            <button class="tab-btn" onclick="switchTab('power')">⚡ Power & Thermals</button>
             <button class="tab-btn" onclick="switchTab('insights')">🧠 Intelligence & Insights</button>
             <button class="tab-btn" onclick="switchTab('dns')">🛡️ DNS & Ad-Block</button>
             <button class="tab-btn" onclick="switchTab('console')">⚡ AT Console & Band Locker</button>
@@ -1966,6 +1967,158 @@
             </div>
         </div>
 
+        <!-- TAB: POWER & HARDWARE THERMALS -->
+        <div id="tab-power" class="tab-content">
+            <!-- Power & Voltage Rail Status Banner / KPI Grid -->
+            <div class="cards-grid" style="margin-bottom: 20px;">
+                <!-- Card 1: Main System Rail Voltage -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⚡ Main Power Rail (Vph)</span>
+                        <span class="card-badge green" id="pwr-live-status-badge">HEALTHY</span>
+                    </div>
+                    <div class="card-val" id="pwr-live-vph" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">
+                        <span>Ref Voltage: <b id="pwr-live-vref" style="color: #34d399;">1.2500 V</b></span>
+                        <span>Nominal: <b>~3.35 V</b></span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted);">USB 2.0 Health:</span>
+                        <span id="pwr-sag-indicator" style="color: #34d399; font-weight: 600;">Optimal Supply</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Peak Thermal Watchdog -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌡️ Peak Temperature</span>
+                        <span class="card-badge" id="pwr-peak-temp-badge" style="background: rgba(56,189,248,0.2); color: #38bdf8;">Normal</span>
+                    </div>
+                    <div class="card-val" id="pwr-peak-temp-val" style="color: #f59e0b;">--</div>
+                    <div class="card-sub">
+                        <span>Hottest: <b id="pwr-peak-temp-component">--</b></span>
+                        <span>Throttle Limit: <b style="color: #ef4444;">85°C</b></span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted);">SAR Status:</span>
+                        <span style="color: #34d399; font-weight: 600;">Disabled (Full Tx Power)</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Voltage & Thermal Statistics Summary -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">📊 Range Telemetry Stats</span>
+                        <span class="card-badge blue" id="pwr-range-badge">Last 1h</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Voltage Range:</span>
+                            <span style="font-family: var(--font-mono); font-weight: 600;">
+                                <span id="pwr-summary-min-v" style="color: #38bdf8;">--</span> - <span id="pwr-summary-max-v" style="color: #34d399;">--</span>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Average Voltage:</span>
+                            <span id="pwr-summary-avg-v" style="font-family: var(--font-mono); font-weight: 600; color: #a78bfa;">--</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Max Temperature:</span>
+                            <span id="pwr-summary-max-t" style="font-family: var(--font-mono); font-weight: 600; color: #f59e0b;">--</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Voltage Sag (&lt;3.2V):</span>
+                            <span id="pwr-summary-sag-cnt" style="font-family: var(--font-mono); font-weight: 600; color: #34d399;">0 events</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hardware Component Thermal Matrix Grid -->
+            <div class="glass-card" style="margin-bottom: 20px;">
+                <div style="font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: space-between;">
+                    <span>🔬 Real-Time Thermal Distribution Matrix</span>
+                    <span style="font-size: 11px; font-weight: 400; color: var(--text-muted);">Qualcomm TSENS & Discrete PCB Thermistors</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px;">
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">ARM A7 CPU</div>
+                        <div id="pwr-therm-cpu" style="font-size: 18px; font-weight: 800; color: #ef4444; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">5G Core (NR)</div>
+                        <div id="pwr-therm-5g" style="font-size: 18px; font-weight: 800; color: #f59e0b; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">Hexagon DSP</div>
+                        <div id="pwr-therm-q6" style="font-size: 18px; font-weight: 800; color: #38bdf8; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">IPA Engine</div>
+                        <div id="pwr-therm-ipa" style="font-size: 18px; font-weight: 800; color: #34d399; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">RF PA 1</div>
+                        <div id="pwr-therm-pa1" style="font-size: 18px; font-weight: 800; color: #ec4899; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">RF PA 2</div>
+                        <div id="pwr-therm-pa2" style="font-size: 18px; font-weight: 800; color: #ec4899; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">PMIC</div>
+                        <div id="pwr-therm-pmic" style="font-size: 18px; font-weight: 800; color: #8b5cf6; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">TCXO Clock</div>
+                        <div id="pwr-therm-tcxo" style="font-size: 18px; font-weight: 800; color: #06b6d4; margin-top: 4px;">--</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-card); border-radius: 10px; padding: 10px; text-align: center;">
+                        <div style="font-size: 11px; color: var(--text-muted);">Outer Case</div>
+                        <div id="pwr-therm-case" style="font-size: 18px; font-weight: 800; color: #10b981; margin-top: 4px;">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time-Range Selector Buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <div style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                    <span>📈 Historical Power & Thermal Graphs</span>
+                </div>
+                <div class="btn-range-group">
+                    <button class="btn-range power-range-btn active" data-range="1h" onclick="setPowerRange('1h')">1h</button>
+                    <button class="btn-range power-range-btn" data-range="6h" onclick="setPowerRange('6h')">6h</button>
+                    <button class="btn-range power-range-btn" data-range="24h" onclick="setPowerRange('24h')">24h</button>
+                    <button class="btn-range power-range-btn" data-range="7d" onclick="setPowerRange('7d')">7d</button>
+                </div>
+            </div>
+
+            <!-- Two Historical Charts Grid -->
+            <div class="charts-grid">
+                <!-- Chart 1: Main Power Rail Voltage History -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">⚡ System Rail Voltage History (Vph)</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">Sag Threshold: 3.20V</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chart-voltage"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Thermal Distribution History -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🌡️ Multi-Component Thermal History</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">°C Over Time</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chart-thermals"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <footer>
             <span id="ftr-model">5G Modem</span> • Cloud Telemetry Hub • Authenticated via HSTS TLS 1.3
         </footer>
@@ -2120,6 +2273,9 @@
             const content = document.getElementById('tab-' + tabId);
             if (content) content.classList.add('active');
 
+            if (tabId === 'power') {
+                fetchPowerHistory();
+            }
             if (tabId === 'insights') {
                 fetchInsights();
             }
@@ -2693,6 +2849,89 @@
                         options: { ...commonOptions, scales: { ...commonOptions.scales, y: { min: 0, max: 100 } } }
                     });
                 }
+
+                const cVolt = document.getElementById('chart-voltage');
+                if (cVolt && !charts.voltage) {
+                    charts.voltage = new Chart(cVolt, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: 'Vph Rail (V)',
+                                    borderColor: '#38bdf8',
+                                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                                    fill: true,
+                                    tension: 0.2,
+                                    pointRadius: 1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '1.25V Ref (V)',
+                                    borderColor: '#34d399',
+                                    backgroundColor: 'transparent',
+                                    borderDash: [4, 4],
+                                    tension: 0.2,
+                                    pointRadius: 0,
+                                    yAxisID: 'y1'
+                                }
+                            ]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                ...commonOptions.scales,
+                                y: {
+                                    position: 'left',
+                                    title: { display: true, text: 'Vph (V)', color: '#38bdf8', font: { size: 9 } },
+                                    suggestedMin: 3.10,
+                                    suggestedMax: 3.50,
+                                    ticks: { font: { size: 9 } }
+                                },
+                                y1: {
+                                    position: 'right',
+                                    grid: { drawOnChartArea: false },
+                                    title: { display: true, text: 'Vref (V)', color: '#34d399', font: { size: 9 } },
+                                    suggestedMin: 1.20,
+                                    suggestedMax: 1.30,
+                                    ticks: { font: { size: 9 } }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                const cTherm = document.getElementById('chart-thermals');
+                if (cTherm && !charts.thermals) {
+                    charts.thermals = new Chart(cTherm, {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                { label: 'CPU (ARM A7)', borderColor: '#ef4444', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: '5G Modem', borderColor: '#f59e0b', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: 'RF PA', borderColor: '#ec4899', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: 'IPA Engine', borderColor: '#34d399', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: 'PMIC', borderColor: '#8b5cf6', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: 'Case Shell', borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 },
+                                { label: 'TCXO Clock', borderColor: '#06b6d4', backgroundColor: 'transparent', tension: 0.2, pointRadius: 1 }
+                            ]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                ...commonOptions.scales,
+                                y: {
+                                    position: 'left',
+                                    title: { display: true, text: 'Temperature (°C)', color: '#f59e0b', font: { size: 9 } },
+                                    suggestedMin: 30,
+                                    suggestedMax: 65,
+                                    ticks: { font: { size: 9 } }
+                                }
+                            }
+                        }
+                    });
+                }
             } catch (err) {
                 console.error('initCharts error:', err);
             }
@@ -2984,6 +3223,86 @@
                         }
                     }
                 }
+
+                // ==========================================
+                // Power Rail Voltage & Hardware Thermals
+                // ==========================================
+                const pwr = d.power || payload.power || {};
+                if (pwr.voltage_vph !== undefined && pwr.voltage_vph !== null) {
+                    const vph = parseFloat(pwr.voltage_vph);
+                    setTextIfChanged('pwr-live-vph', vph.toFixed(3) + ' V');
+                    const vref = (pwr.voltage_vref !== undefined && pwr.voltage_vref !== null)
+                        ? parseFloat(pwr.voltage_vref).toFixed(4) + ' V'
+                        : '1.2500 V';
+                    setTextIfChanged('pwr-live-vref', vref);
+
+                    const stBadge = document.getElementById('pwr-live-status-badge');
+                    const sagInd = document.getElementById('pwr-sag-indicator');
+                    if (vph < 3.20) {
+                        if (stBadge) { stBadge.className = 'card-badge red'; stBadge.textContent = 'VOLTAGE SAG'; }
+                        if (sagInd) { sagInd.style.color = '#ef4444'; sagInd.textContent = '⚠️ Voltage Sag (<3.20V)'; }
+                    } else if (vph < 3.30) {
+                        if (stBadge) { stBadge.className = 'card-badge yellow'; stBadge.textContent = 'MARGINAL'; }
+                        if (sagInd) { sagInd.style.color = '#f59e0b'; sagInd.textContent = 'Marginal Supply Level'; }
+                    } else {
+                        if (stBadge) { stBadge.className = 'card-badge green'; stBadge.textContent = 'HEALTHY'; }
+                        if (sagInd) { sagInd.style.color = '#34d399'; sagInd.textContent = 'Optimal Supply'; }
+                    }
+                }
+
+                // Thermal Distribution Matrix & Peak Watchdog
+                const th = d.thermals || payload.thermals || {};
+                setTextIfChanged('pwr-therm-cpu', th.cpu || '--');
+                setTextIfChanged('pwr-therm-5g', th['5g'] || '--');
+                setTextIfChanged('pwr-therm-q6', th.q6 || '--');
+                setTextIfChanged('pwr-therm-ipa', th.ipa || '--');
+                setTextIfChanged('pwr-therm-pa1', th.pa || '--');
+                setTextIfChanged('pwr-therm-pa2', th.pa2 || th.pa || '--');
+                setTextIfChanged('pwr-therm-pmic', th.pmic || '--');
+                setTextIfChanged('pwr-therm-tcxo', th.tcxo || '--');
+                setTextIfChanged('pwr-therm-case', th.case || '--');
+
+                let peakVal = -1;
+                let peakName = '--';
+                const thermItems = [
+                    { name: 'ARM CPU', val: th.cpu },
+                    { name: '5G Core', val: th['5g'] },
+                    { name: 'Hexagon DSP', val: th.q6 },
+                    { name: 'IPA Engine', val: th.ipa },
+                    { name: 'RF PA', val: th.pa },
+                    { name: 'PMIC', val: th.pmic },
+                    { name: 'TCXO Clock', val: th.tcxo },
+                    { name: 'Outer Case', val: th.case }
+                ];
+                thermItems.forEach(item => {
+                    if (item.val) {
+                        const n = parseFloat(String(item.val).replace(/[^\d.-]/g, ''));
+                        if (!isNaN(n) && n > peakVal) {
+                            peakVal = n;
+                            peakName = item.name;
+                        }
+                    }
+                });
+                if (peakVal > 0) {
+                    setTextIfChanged('pwr-peak-temp-val', peakVal.toFixed(1) + '°C');
+                    setTextIfChanged('pwr-peak-temp-component', peakName);
+                    const pkBadge = document.getElementById('pwr-peak-temp-badge');
+                    if (pkBadge) {
+                        if (peakVal >= 75) {
+                            pkBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+                            pkBadge.style.color = '#ef4444';
+                            pkBadge.textContent = 'Critical Hot';
+                        } else if (peakVal >= 60) {
+                            pkBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+                            pkBadge.style.color = '#f59e0b';
+                            pkBadge.textContent = 'Warm';
+                        } else {
+                            pkBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+                            pkBadge.style.color = '#38bdf8';
+                            pkBadge.textContent = 'Normal';
+                        }
+                    }
+                }
             } catch (err) {
                 console.error('updateLiveUI error:', err);
             }
@@ -3035,6 +3354,69 @@
                     }
                 }
             } catch (e) {}
+        }
+
+        let currentPowerRange = '1h';
+
+        function setPowerRange(r) {
+            currentPowerRange = r;
+            document.querySelectorAll('.power-range-btn').forEach(b => {
+                b.className = b.getAttribute('data-range') === r ? 'btn-range power-range-btn active' : 'btn-range power-range-btn';
+            });
+            fetchPowerHistory();
+        }
+
+        async function fetchPowerHistory(r) {
+            if (r) currentPowerRange = r;
+            const rangeBadge = document.getElementById('pwr-range-badge');
+            if (rangeBadge) rangeBadge.textContent = 'Last ' + currentPowerRange;
+
+            try {
+                const res = await fetch('/api/telemetry/power-history?range=' + currentPowerRange, { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+                const points = data.points || [];
+                const summary = data.summary || {};
+
+                // Update range statistics KPI
+                if (summary.min_voltage !== undefined) {
+                    setTextIfChanged('pwr-summary-min-v', summary.min_voltage > 0 ? summary.min_voltage.toFixed(3) + 'V' : '--');
+                    setTextIfChanged('pwr-summary-max-v', summary.max_voltage > 0 ? summary.max_voltage.toFixed(3) + 'V' : '--');
+                    setTextIfChanged('pwr-summary-avg-v', summary.avg_voltage > 0 ? summary.avg_voltage.toFixed(3) + 'V' : '--');
+                    setTextIfChanged('pwr-summary-max-t', summary.max_temperature > 0 ? summary.max_temperature.toFixed(1) + '°C' : '--');
+                    const sagCnt = summary.sag_events_count || 0;
+                    const sagEl = document.getElementById('pwr-summary-sag-cnt');
+                    if (sagEl) {
+                        sagEl.textContent = sagCnt + (sagCnt === 1 ? ' event' : ' events');
+                        sagEl.style.color = sagCnt > 0 ? '#ef4444' : '#34d399';
+                    }
+                }
+
+                const labels = points.map(p => formatTime(p.ts));
+
+                // Update Voltage Chart
+                if (charts.voltage) {
+                    charts.voltage.data.labels = labels;
+                    charts.voltage.data.datasets[0].data = points.map(p => p.voltage_vph);
+                    charts.voltage.data.datasets[1].data = points.map(p => p.voltage_vref);
+                    charts.voltage.update('none');
+                }
+
+                // Update Thermals Chart
+                if (charts.thermals) {
+                    charts.thermals.data.labels = labels;
+                    charts.thermals.data.datasets[0].data = points.map(p => p.temp_cpu);
+                    charts.thermals.data.datasets[1].data = points.map(p => p.temp_5g);
+                    charts.thermals.data.datasets[2].data = points.map(p => p.temp_pa);
+                    charts.thermals.data.datasets[3].data = points.map(p => p.temp_ipa);
+                    charts.thermals.data.datasets[4].data = points.map(p => p.temp_pmic);
+                    charts.thermals.data.datasets[5].data = points.map(p => p.temp_case);
+                    charts.thermals.data.datasets[6].data = points.map(p => p.temp_tcxo);
+                    charts.thermals.update('none');
+                }
+            } catch (e) {
+                console.error('fetchPowerHistory error:', e);
+            }
         }
 
         function renderIPTable() {
@@ -4145,12 +4527,13 @@
             const hash = window.location.hash.replace("#", "");
             const urlParams = new URLSearchParams(window.location.search);
             const targetTab = hash || urlParams.get("tab");
-            if (targetTab && ["telemetry", "insights", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
+            if (targetTab && ["telemetry", "power", "insights", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
                 switchTab(targetTab);
             }
             initCharts();
             fetchLive();
             fetchHistory();
+            fetchPowerHistory();
             fetchIPs();
             fetchTowers();
             fetchUsageHistory();
@@ -4163,6 +4546,7 @@
             setInterval(updateSyncTickers, 1000);
             setInterval(fetchLive, 5000);
             setInterval(fetchInsights, 15000);
+            setInterval(fetchPowerHistory, 15000);
             setInterval(fetchDns, 8000);
             setInterval(fetchHistory, 15000);
             setInterval(fetchAlerts, 15000);

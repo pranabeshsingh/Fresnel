@@ -673,6 +673,13 @@ def init_db():
                 temp_5g VARCHAR2(50),
                 temp_pa VARCHAR2(50),
                 temp_ipa VARCHAR2(50),
+                temp_pmic VARCHAR2(50),
+                temp_case VARCHAR2(50),
+                temp_tcxo VARCHAR2(50),
+                temp_ambient VARCHAR2(50),
+                voltage_vph NUMBER(8, 3),
+                voltage_vref NUMBER(8, 4),
+                power_status VARCHAR2(50),
                 ping_vps_ms NUMBER(10, 2),
                 ping_cf_ms NUMBER(10, 2),
                 ping_gg_ms NUMBER(10, 2),
@@ -1387,7 +1394,18 @@ def build_telemetry_dict(r):
             "cpu": t_cpu,
             "mdm_5g": t_mdm,
             "pa": t_pa,
-            "ipa": t_ipa
+            "ipa": t_ipa,
+            "pmic": str(r.get("temp_pmic") or "--"),
+            "case": str(r.get("temp_case") or "--"),
+            "tcxo": str(r.get("temp_tcxo") or "--"),
+            "ambient": str(r.get("temp_ambient") or "--"),
+            "pa1": t_pa,
+            "pa2": str(r.get("temp_pa2") or t_pa)
+        },
+        "power": {
+            "voltage_vph": float(r.get("voltage_vph") or 0.0),
+            "voltage_vref": float(r.get("voltage_vref") or 1.250),
+            "power_status": str(r.get("power_status") or "HEALTHY")
         },
         "ping": {
             "vps": r.get("ping_vps", "--"),
@@ -1658,6 +1676,15 @@ def record_telemetry(data, client_ip=""):
     adb_blk = int(adb_data.get("blocked_domains", 0))
     adb_lu = adb_data.get("last_updated", "")
 
+    power_data = data.get("power", {})
+    v_vph = float(power_data.get("voltage_vph") or 0.0)
+    v_vref = float(power_data.get("voltage_vref") or 1.250)
+    p_stat = str(power_data.get("power_status") or "HEALTHY")
+    t_pmic = str(therm_data.get("pmic") or "")
+    t_case = str(therm_data.get("case") or "")
+    t_tcxo = str(therm_data.get("tcxo") or "")
+    t_ambient = str(therm_data.get("ambient") or "")
+
     with get_db() as (conn, cur):
         cur.execute("""
         INSERT INTO telemetry (
@@ -1667,6 +1694,7 @@ def record_telemetry(data, client_ip=""):
             today_bytes, today_download, today_upload, month_bytes, month_total,
             alltime_bytes, alltime_total, cpu_percent, ram_percent, ram_used, ram_total, ram_free,
             disk_percent, disk_used, disk_total, disk_free, temp_cpu, temp_5g, temp_pa, temp_ipa,
+            temp_pmic, temp_case, temp_tcxo, temp_ambient, voltage_vph, voltage_vref, power_status,
             ping_vps_ms, ping_cf_ms, ping_gg_ms, ping_vps, ping_cf, ping_gg, usb_speed, host_ip, host_mac, uptime, uptime_sec, public_ip,
             nr5g_band, lte_band, apn, sim_status, mobile_ipv4, mobile_ipv6, dns_primary, dns_secondary, dns_profile, signal_bars, ttl_bypass,
             host_interface, host_protocol, raw_usb_speed, host_name, host_mtu, host_status, sys_model, sys_firmware, sys_imei,
@@ -1683,15 +1711,16 @@ def record_telemetry(data, client_ip=""):
             :21, :22, :23, :24, :25,
             :26, :27, :28, :29, :30, :31, :32,
             :33, :34, :35, :36, :37, :38, :39, :40,
-            :41, :42, :43, :44, :45, :46, :47, :48, :49, :50, :51, :52,
-            :53, :54, :55, :56, :57, :58, :59, :60, :61, :62, :63,
-            :64, :65, :66, :67, :68, :69, :70, :71, :72,
-            :73, :74, :75, :76, :77,
-            :78, :79, :80, :81, :82, :83, :84, :85, :86,
-            :87, :88,
-            :89, :90, :91, :92,
-            :93, :94, :95, :96,
-            :97, :98, :99
+            :41, :42, :43, :44, :45, :46, :47,
+            :48, :49, :50, :51, :52, :53, :54, :55, :56, :57, :58, :59,
+            :60, :61, :62, :63, :64, :65, :66, :67, :68, :69, :70,
+            :71, :72, :73, :74, :75, :76, :77, :78, :79,
+            :80, :81, :82, :83, :84,
+            :85, :86, :87, :88, :89, :90, :91, :92, :93,
+            :94, :95,
+            :96, :97, :98, :99,
+            :100, :101, :102, :103,
+            :104, :105, :106
         )
         """, (
             now,
@@ -1732,6 +1761,13 @@ def record_telemetry(data, client_ip=""):
             therm_data.get("mdm_5g", ""),
             therm_data.get("pa", ""),
             therm_data.get("ipa", ""),
+            t_pmic,
+            t_case,
+            t_tcxo,
+            t_ambient,
+            v_vph,
+            v_vref,
+            p_stat,
             vps_p_ms,
             cf_p_ms,
             gg_p_ms,
@@ -2756,6 +2792,104 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(json.dumps({"range": range_arg, "points": data}).encode("utf-8"))
+            return
+
+        # Power & Thermal Telemetry History
+        if parsed.path == "/api/telemetry/power-history":
+            qs = urllib.parse.parse_qs(parsed.query)
+            range_arg = qs.get("range", ["1h"])[0]
+            now = int(time.time())
+
+            durations = {"1h": 3600, "6h": 21600, "24h": 86400, "7d": 604800, "30d": 2592000}
+            duration = durations.get(range_arg, 3600)
+            start_ts = now - duration
+
+            with get_db() as (conn, cur):
+                cur.execute("""
+                SELECT timestamp, voltage_vph, voltage_vref, power_status,
+                       temp_cpu, temp_5g, temp_pa, temp_ipa, temp_pmic, temp_case, temp_tcxo
+                FROM telemetry
+                WHERE timestamp >= :1
+                ORDER BY timestamp ASC
+                """, (start_ts,))
+                rows = cur.fetchall()
+
+            def parse_temp(val):
+                if not val or val == "--":
+                    return None
+                try:
+                    m = re.search(r"[-+]?\d*\.?\d+", str(val))
+                    return float(m.group(0)) if m else None
+                except Exception:
+                    return None
+
+            step = max(1, len(rows) // 300)
+            sampled = rows[::step]
+            points = []
+            min_v = 999.0
+            max_v = 0.0
+            sum_v = 0.0
+            count_v = 0
+            sag_events = 0
+            max_temp = 0.0
+
+            for r in sampled:
+                ts = r[0]
+                v_vph = float(r[1]) if r[1] is not None and float(r[1]) > 0 else None
+                v_ref = float(r[2]) if r[2] is not None and float(r[2]) > 0 else 1.250
+                p_stat = r[3] or "HEALTHY"
+                t_cpu = parse_temp(r[4])
+                t_5g = parse_temp(r[5])
+                t_pa = parse_temp(r[6])
+                t_ipa = parse_temp(r[7])
+                t_pmic = parse_temp(r[8])
+                t_case = parse_temp(r[9])
+                t_tcxo = parse_temp(r[10])
+
+                if v_vph is not None and v_vph > 0:
+                    min_v = min(min_v, v_vph)
+                    max_v = max(max_v, v_vph)
+                    sum_v += v_vph
+                    count_v += 1
+                    if v_vph < 3.20:
+                        sag_events += 1
+
+                for t_val in (t_cpu, t_5g, t_pa, t_pmic, t_case):
+                    if t_val is not None:
+                        max_temp = max(max_temp, t_val)
+
+                points.append({
+                    "ts": ts,
+                    "voltage_vph": v_vph,
+                    "voltage_vref": v_ref,
+                    "power_status": p_stat,
+                    "temp_cpu": t_cpu,
+                    "temp_5g": t_5g,
+                    "temp_pa": t_pa,
+                    "temp_ipa": t_ipa,
+                    "temp_pmic": t_pmic,
+                    "temp_case": t_case,
+                    "temp_tcxo": t_tcxo
+                })
+
+            summary = {
+                "min_voltage": round(min_v, 3) if count_v > 0 else 0.0,
+                "avg_voltage": round(sum_v / count_v, 3) if count_v > 0 else 0.0,
+                "max_voltage": round(max_v, 3) if count_v > 0 else 0.0,
+                "max_temperature": round(max_temp, 1) if max_temp > 0 else 0.0,
+                "sag_events_count": sag_events,
+                "total_points": len(points)
+            }
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "range": range_arg,
+                "points": points,
+                "summary": summary
+            }).encode("utf-8"))
             return
 
         # Towers API
