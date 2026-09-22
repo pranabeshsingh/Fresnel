@@ -14,6 +14,10 @@ systemctl mask --runtime ceisar 2>/dev/null || true
 systemctl stop ceisar 2>/dev/null || pkill -9 ceisar 2>/dev/null || true
 echo 0 > /sys/bus/i2c/devices/1-0018/stk8xxx/enable 2>/dev/null || true
 
+# 1.6. Permanently Disable GPS / Location Subsystem (Save USB 2.0 Power & RAM)
+systemctl mask --runtime loc_launcher location_hal_daemon 2>/dev/null || true
+systemctl stop loc_launcher location_hal_daemon 2>/dev/null || pkill -9 -u gps 2>/dev/null || true
+
 # 2. Apply firewall security, TTL=64, HL=64 & 5G Kernel Tuning
 /usrdata/simpleadmin/scripts/firewall_security.sh >/dev/null 2>&1
 
