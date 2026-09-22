@@ -9,6 +9,11 @@ export TZ="IST-5:30"
 # 1. Lock USB Controller to Always Active
 echo on > /sys/devices/platform/a600000.ssusb/power/control 2>/dev/null
 
+# 1.5. Permanently Disable SAR Power Backoff & G-Sensor Interrupts (Stationary Router Mode)
+systemctl mask --runtime ceisar 2>/dev/null || true
+systemctl stop ceisar 2>/dev/null || pkill -9 ceisar 2>/dev/null || true
+echo 0 > /sys/bus/i2c/devices/1-0018/stk8xxx/enable 2>/dev/null || true
+
 # 2. Apply firewall security, TTL=64, HL=64 & 5G Kernel Tuning
 /usrdata/simpleadmin/scripts/firewall_security.sh >/dev/null 2>&1
 
