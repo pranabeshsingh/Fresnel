@@ -1,10 +1,11 @@
 #!/bin/sh
 
-# 0. Setup Indian Standard Time (IST UTC+05:30)
+# 0. Setup Indian Standard Time (IST UTC+05:30) and System PATH
 mkdir -p /tmp
-cat /etc/profile > /tmp/profile 2>/dev/null && echo 'export TZ="IST-5:30"' >> /tmp/profile && mount --bind /tmp/profile /etc/profile 2>/dev/null || true
+cat /etc/profile > /tmp/profile 2>/dev/null && echo 'export TZ="IST-5:30"' >> /tmp/profile && echo 'export PATH="$PATH:/data/simpleadmin/scripts:/data/simpleadmin/bin"' >> /tmp/profile && echo 'alias power-monitor="/data/simpleadmin/scripts/power_monitor.sh"' >> /tmp/profile && mount --bind /tmp/profile /etc/profile 2>/dev/null || true
 cat /etc/environment > /tmp/environment 2>/dev/null && echo 'TZ="IST-5:30"' >> /tmp/environment && mount --bind /tmp/environment /etc/environment 2>/dev/null || true
 export TZ="IST-5:30"
+export PATH="$PATH:/data/simpleadmin/scripts:/data/simpleadmin/bin"
 
 # 1. Lock USB Controller to Always Active
 echo on > /sys/devices/platform/a600000.ssusb/power/control 2>/dev/null
