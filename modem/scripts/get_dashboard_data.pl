@@ -811,6 +811,9 @@ sub sample_and_emit {
         if ($cops_out =~ /\+COPS:\s*\d+,\d+,"([^"]+)",?(\d+)?/) {
             my $p = $1;
             $cops_act = defined $2 ? $2 : "";
+            if ($p =~ /^40586\d/ || $p =~ /^40585\d/) {
+                $p = ($cops_act eq "7") ? "Jio 4G" : "Jio True5G";
+            }
             $p =~ s/\s+\w+$// if $p =~ /^(.+?)\s+\1$/i;
             $p =~ s/\s+Jio$//i if $p =~ /^Jio\s+/i;
             $p =~ s/\s+Airtel$//i if $p =~ /^Airtel\s+/i;
@@ -904,22 +907,30 @@ sub sample_and_emit {
         if ($cops_act eq "11" || $cops_act eq "12" || $cereg_act eq "11" || $cereg_act eq "12") {
             $rf{is_5g} = 1;
             $rf{network_type} = "5G SA";
-            $rf{conn_bands} = $rf{nr5g_band} ? $rf{nr5g_band} : "NR5G";
-        } elsif ($cops_act eq "13" || $cereg_act eq "13" || ($has_nr && ($cops_act eq "7" || $cereg_act eq "7" || $cops_act eq ""))) {
+            $rf{conn_bands} = $rf{nr5g_band} ? $rf{nr5g_band} : "NR5G Band 78";
+            $rf{provider} =~ s/4G/True5G/ if $rf{provider};
+        } elsif ($cops_act eq "7" || $cereg_act eq "7") {
+            if ($has_nr && ($cops_act eq "13" || $cereg_act eq "13")) {
+                $rf{is_5g} = 1;
+                $rf{network_type} = "5G NSA";
+                if ($rf{lte_band} && $rf{nr5g_band}) {
+                    $rf{conn_bands} = "$rf{lte_band} + $rf{nr5g_band}";
+                } elsif ($rf{nr5g_band}) {
+                    $rf{conn_bands} = "LTE + $rf{nr5g_band}";
+                } else {
+                    $rf{conn_bands} = "LTE + NR5G";
+                }
+            } else {
+                $rf{is_5g} = 0;
+                $rf{network_type} = "4G LTE";
+                $rf{conn_bands} = $rf{lte_band} ? $rf{lte_band} : "4G LTE";
+                $rf{nr5g_band} = "";
+                $rf{provider} =~ s/True5G/4G/ if $rf{provider};
+            }
+        } elsif ($cops_act eq "13" || $cereg_act eq "13") {
             $rf{is_5g} = 1;
             $rf{network_type} = "5G NSA";
-            if ($rf{lte_band} && $rf{nr5g_band}) {
-                $rf{conn_bands} = "$rf{lte_band} + $rf{nr5g_band}";
-            } elsif ($rf{nr5g_band}) {
-                $rf{conn_bands} = "LTE + $rf{nr5g_band}";
-            } else {
-                $rf{conn_bands} = "LTE + NR5G";
-            }
-        } elsif ($cops_act eq "7" || $cereg_act eq "7") {
-            $rf{is_5g} = 0;
-            $rf{network_type} = "4G LTE";
-            $rf{conn_bands} = $rf{lte_band} ? $rf{lte_band} : "LTE";
-            $rf{nr5g_band} = "";
+            $rf{conn_bands} = ($rf{lte_band} && $rf{nr5g_band}) ? "$rf{lte_band} + $rf{nr5g_band}" : "LTE + NR5G";
         } elsif ($cops_act eq "2") {
             $rf{is_5g} = 0;
             $rf{network_type} = "3G UTRAN";
@@ -927,8 +938,8 @@ sub sample_and_emit {
             $rf{nr5g_band} = "";
         } else {
             $rf{is_5g} = $has_nr ? 1 : 0;
-            $rf{network_type} = $has_nr ? "5G NSA" : "Cellular";
-            $rf{conn_bands} = $has_nr ? "LTE + NR5G" : "Cellular";
+            $rf{network_type} = $has_nr ? "5G SA" : "Cellular";
+            $rf{conn_bands} = $has_nr ? ($rf{nr5g_band} || "NR5G Band 78") : "Cellular";
         }
 
         my $rsrp_n = ($rf{rsrp_str} =~ /(-?\d+)/) ? int($1) : -90;
@@ -1140,15 +1151,26 @@ sub sample_and_emit {
 
     my $open_ports_str = '[{"port":8080,"proto":"TCP","service":"SimpleAdmin Web UI","status":"Listening"},{"port":22,"proto":"TCP","service":"OpenSSH Shell","status":"Listening"},{"port":53,"proto":"UDP","service":"Dnsmasq DNS Resolver","status":"Listening"},{"port":123,"proto":"UDP","service":"NTP Time Server","status":"Listening"}]';
 
+    my $configured_mode = "auto";
+    if (-f "/data/simpleadmin/network_mode.json" && open(my $cmfh, "<", "/data/simpleadmin/network_mode.json")) {
+        my $raw_cm = do { local $/; <$cmfh> };
+        close($cmfh);
+        if ($raw_cm =~ /"mode":\s*"([^"]+)"/) {
+            $configured_mode = $1;
+        }
+    }
+
     my $json = <<"END_JSON";
 {
   "status": "success",
   "timestamp": $now,
+  "configured_mode": "$configured_mode",
   "connection": {
     "is_online": $rf{is_online},
     "is_5g": $rf{is_5g},
     "provider": "$rf{provider}",
     "network_type": "$rf{network_type}",
+    "configured_mode": "$configured_mode",
     "connection_bands": "$rf{conn_bands}",
     "nr5g_band": "$rf{nr5g_band}",
     "lte_band": "$rf{lte_band}",

@@ -52,3 +52,11 @@ fi
 # 6. Pre-warm in-memory DNS cache in background
 [ -x /usrdata/simpleadmin/scripts/dns_warmup.sh ] && /usrdata/simpleadmin/scripts/dns_warmup.sh >/dev/null 2>&1 &
 nohup perl /data/simpleadmin/scripts/remote_agent.pl >/dev/null 2>&1 &
+
+# 7. Re-apply persistent Network Mode Preference if configured
+if [ -f /data/simpleadmin/network_mode.json ] && [ -x /usrdata/simpleadmin/scripts/band_lock.pl ]; then
+    CFG_MODE=$(grep -o '"mode": *"[^"]*"' /data/simpleadmin/network_mode.json 2>/dev/null | cut -d'"' -f4)
+    if [ -n "$CFG_MODE" ] && [ "$CFG_MODE" != "auto" ]; then
+        nohup perl /usrdata/simpleadmin/scripts/band_lock.pl "$CFG_MODE" >/dev/null 2>&1 &
+    fi
+fi

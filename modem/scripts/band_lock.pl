@@ -31,14 +31,20 @@ my $token = $params{token} || "";
 $token =~ s/[^a-fA-F0-9]//g;
 my $action = $params{action} || "get_mode";
 my $mode = $params{mode} || "";
-$mode =~ s/[^a-z0-9_]//gi;  # Sanitize: only alphanumeric+underscore allowed in JSON output
+$mode =~ s/[^a-z0-9_]//gi;
 
-print "Content-type: application/json\n";
-print "Cache-Control: no-cache\n\n";
+my $cli_mode = $ARGV[0] || "";
+if ($cli_mode) {
+    $action = ($cli_mode eq "get" || $cli_mode eq "status") ? "get_mode" : "set_mode";
+    $mode = $cli_mode unless $action eq "get_mode";
+} else {
+    print "Content-type: application/json\n";
+    print "Cache-Control: no-cache\n\n";
 
-if (length($token) != 32 || ! -f "$session_dir/$token") {
-    print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
-    exit(0);
+    if (length($token) != 32 || ! -f "$session_dir/$token") {
+        print "{\"status\":\"error\",\"message\":\"Unauthorized\"}\n";
+        exit(0);
+    }
 }
 
 sub run_at {
@@ -92,6 +98,8 @@ sub run_at {
     return $out;
 }
 
+my $mode_file = "/data/simpleadmin/network_mode.json";
+
 if ($action eq "set_mode") {
     my $ws46_val = 25;
     my $preset_name = "Auto / NSA Mode";
@@ -99,43 +107,56 @@ if ($action eq "set_mode") {
     if ($mode eq "5g_only" || $mode eq "5g_n78" || $mode eq "5g_n28") {
         $ws46_val = 30; # 5G NR Only / SA Lock
         $preset_name = "5G Only Standalone";
+        $mode = "5g_only";
     } elsif ($mode eq "4g_only") {
         $ws46_val = 28; # 4G LTE Only
         $preset_name = "4G LTE Only";
+        $mode = "4g_only";
     } else {
         $ws46_val = 25; # Auto 5G Preferred / NSA Mode
         $preset_name = "Auto / NSA Mode";
+        $mode = "auto";
     }
     
-    my $res = run_at("AT+WS46=$ws46_val");
-    if ($res =~ /OK/) {
-        if ($ws46_val == 28) {
-            # Extract numeric PLMN (e.g. 405861) to lock to LTE AcT 7
-            my $cops = run_at("AT+COPS=3,2;+COPS?");
-            my ($plmn) = $cops =~ /\+COPS:\s*\d+,\d+,"(\d+)"/;
-            $plmn ||= "405861";
-            run_at("AT+COPS=1,2,\"$plmn\",7");
-        } else {
-            # Automatic network selection with specified WS46 preference
-            run_at("AT+COPS=0");
-        }
-        print "{\"status\":\"ok\",\"mode\":\"$mode\",\"preset\":\"$preset_name\",\"message\":\"Network mode updated to $preset_name\"}\n";
+    run_at("AT+WS46=$ws46_val");
+    if ($ws46_val == 28) {
+        # Extract numeric PLMN (e.g. 405861) to lock to LTE AcT 7
+        my $cops = run_at("AT+COPS=3,2;+COPS?");
+        my ($plmn) = $cops =~ /\+COPS:\s*\d+,\d+,"(\d+)"/;
+        $plmn ||= "405861";
+        run_at("AT+COPS=1,2,\"$plmn\",7");
+        run_at("AT+COPS=3,0");
     } else {
-        print "{\"status\":\"error\",\"message\":\"Failed to set network mode\"}\n";
+        # Automatic network selection with specified WS46 preference
+        run_at("AT+COPS=0");
+        run_at("AT+COPS=3,0");
     }
+    
+    # Persist configured mode to state file
+    if (open(my $mf, ">", $mode_file)) {
+        print $mf "{\"mode\":\"$mode\",\"preset\":\"$preset_name\",\"timestamp\":" . time() . "}\n";
+        close($mf);
+    }
+    
+    print "{\"status\":\"ok\",\"mode\":\"$mode\",\"preset\":\"$preset_name\",\"message\":\"Network mode updated to $preset_name\"}\n";
 } else {
-    my $res = run_at("AT+WS46?");
-    my $cur_mode = "auto";
-    if ($res =~ /\+WS46:\s*(\d+)/ || $res =~ /(\d+)\s+OK/) {
-        my $val = $1;
-        if ($val == 30) { $cur_mode = "5g_only"; }
-        elsif ($val == 28) { $cur_mode = "4g_only"; }
-        else { $cur_mode = "auto"; }
+    my $cur_mode = "";
+    if (-f $mode_file && open(my $mf, "<", $mode_file)) {
+        my $content = do { local $/; <$mf> };
+        close($mf);
+        if ($content =~ /"mode":\s*"([^"]+)"/) {
+            $cur_mode = $1;
+        }
     }
-    # Also verify live COPS registration
-    my $cops_check = run_at("AT+COPS?");
-    if ($cops_check =~ /,\s*7\s*$/ || $cops_check =~ /,\s*7\r?\n/) {
-        $cur_mode = "4g_only";
+    if (!$cur_mode) {
+        my $cops_check = run_at("AT+COPS?");
+        if ($cops_check =~ /,\s*7\s*$/ || $cops_check =~ /,\s*7\r?\n/) {
+            $cur_mode = "4g_only";
+        } elsif ($cops_check =~ /,\s*11\s*$/ || $cops_check =~ /,\s*11\r?\n/) {
+            $cur_mode = "5g_only";
+        } else {
+            $cur_mode = "auto";
+        }
     }
     print "{\"status\":\"ok\",\"mode\":\"$cur_mode\"}\n";
 }

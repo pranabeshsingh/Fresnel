@@ -2842,6 +2842,9 @@
             setTxt('txt-ipv4', d.connection?.mobile_ipv4 || '--');
             setTxt('txt-ipv6', d.connection?.mobile_ipv6 || (isOnline ? 'Active' : '--'));
             setTxt('txt-apn', d.connection?.apn || 'jionet');
+            if (d.configured_mode || d.connection?.configured_mode) {
+                updateModePills(d.configured_mode || d.connection?.configured_mode);
+            }
 
             // Signal Meter
             const bars = d.connection?.signal_bars || 0;
