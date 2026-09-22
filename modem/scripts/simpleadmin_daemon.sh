@@ -51,6 +51,12 @@ check_telemetry_pusher() {
     TEL_EN=$(grep -o '"telemetry_enabled": *[0-9]*' "$STATE_FILE" 2>/dev/null | tr -cd '0-9')
     [ -z "$TEL_EN" ] && TEL_EN=0
     
+    # Also check telemetry.conf directly as persistent source of truth
+    if [ -f "$CONF_FILE" ]; then
+        DIS=$(grep -E '^TELEMETRY_ENABLED=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+        [ "$DIS" = "1" ] && TEL_EN=1
+    fi
+    
     if [ "$TEL_EN" = "1" ] && [ -x /usrdata/simpleadmin/scripts/telemetry_pusher.sh ]; then
         if [ -f "$CONF_FILE" ]; then
             URL=$(grep -E '^TELEMETRY_BASE_URL=' "$CONF_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'")
