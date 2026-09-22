@@ -1970,7 +1970,8 @@
         <!-- TAB: POWER & HARDWARE THERMALS -->
         <div id="tab-power" class="tab-content">
             <!-- Power & Voltage Rail Status Banner / KPI Grid -->
-            <div class="cards-grid" style="margin-bottom: 20px;">
+            <!-- Power & Voltage Rail Status Banner / KPI Grid -->
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px;">
                 <!-- Card 1: Main System Rail Voltage -->
                 <div class="glass-card">
                     <div class="card-header">
@@ -1988,7 +1989,24 @@
                     </div>
                 </div>
 
-                <!-- Card 2: Peak Thermal Watchdog -->
+                <!-- Card 2: Stability & Sag Margin -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <span class="card-lbl">🛡️ Stability & Sag Margin</span>
+                        <span class="card-badge green" id="pwr-stability-badge">Protected</span>
+                    </div>
+                    <div class="card-val" id="pwr-live-headroom" style="color: #34d399;">--</div>
+                    <div class="card-sub">
+                        <span>Drop Limit: <b style="color: #ef4444;">3.200 V</b></span>
+                        <span>Power Supply: <b style="color: #38bdf8;">USB 2.0 Bus</b></span>
+                    </div>
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-muted);">Cooling Headroom:</span>
+                        <span id="pwr-live-therm-margin" style="color: #38bdf8; font-weight: 600;">--</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Peak Thermal Watchdog -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">🌡️ Peak Temperature</span>
@@ -2005,7 +2023,7 @@
                     </div>
                 </div>
 
-                <!-- Card 3: Voltage & Thermal Statistics Summary -->
+                <!-- Card 4: Voltage & Thermal Statistics Summary -->
                 <div class="glass-card">
                     <div class="card-header">
                         <span class="card-lbl">📊 Range Telemetry Stats</span>
@@ -3236,27 +3254,41 @@
                         : '1.2500 V';
                     setTextIfChanged('pwr-live-vref', vref);
 
+                    const headroomMv = Math.round((vph - 3.20) * 1000);
+                    const headroomStr = (headroomMv >= 0 ? '+' : '') + headroomMv + ' mV';
+                    setTextIfChanged('pwr-live-headroom', headroomStr);
+
                     const stBadge = document.getElementById('pwr-live-status-badge');
+                    const stabBadge = document.getElementById('pwr-stability-badge');
                     const sagInd = document.getElementById('pwr-sag-indicator');
+                    const hdrEl = document.getElementById('pwr-live-headroom');
                     if (vph < 3.20) {
                         if (stBadge) { stBadge.className = 'card-badge red'; stBadge.textContent = 'VOLTAGE SAG'; }
+                        if (stabBadge) { stabBadge.className = 'card-badge red'; stabBadge.textContent = 'Sag Triggered'; }
                         if (sagInd) { sagInd.style.color = '#ef4444'; sagInd.textContent = '⚠️ Voltage Sag (<3.20V)'; }
+                        if (hdrEl) hdrEl.style.color = '#ef4444';
                     } else if (vph < 3.30) {
                         if (stBadge) { stBadge.className = 'card-badge yellow'; stBadge.textContent = 'MARGINAL'; }
+                        if (stabBadge) { stabBadge.className = 'card-badge yellow'; stabBadge.textContent = 'Marginal'; }
                         if (sagInd) { sagInd.style.color = '#f59e0b'; sagInd.textContent = 'Marginal Supply Level'; }
+                        if (hdrEl) hdrEl.style.color = '#f59e0b';
                     } else {
                         if (stBadge) { stBadge.className = 'card-badge green'; stBadge.textContent = 'HEALTHY'; }
+                        if (stabBadge) { stabBadge.className = 'card-badge green'; stabBadge.textContent = 'Protected'; }
                         if (sagInd) { sagInd.style.color = '#34d399'; sagInd.textContent = 'Optimal Supply'; }
+                        if (hdrEl) hdrEl.style.color = '#34d399';
                     }
                 }
 
                 // Thermal Distribution Matrix & Peak Watchdog
                 const th = d.thermals || payload.thermals || {};
+                const t5g = th['5g'] || th.mdm_5g || '--';
+                const tQ6 = th.q6 || th['5g'] || th.mdm_5g || '--';
                 setTextIfChanged('pwr-therm-cpu', th.cpu || '--');
-                setTextIfChanged('pwr-therm-5g', th['5g'] || '--');
-                setTextIfChanged('pwr-therm-q6', th.q6 || '--');
+                setTextIfChanged('pwr-therm-5g', t5g);
+                setTextIfChanged('pwr-therm-q6', tQ6);
                 setTextIfChanged('pwr-therm-ipa', th.ipa || '--');
-                setTextIfChanged('pwr-therm-pa1', th.pa || '--');
+                setTextIfChanged('pwr-therm-pa1', th.pa || th.pa1 || '--');
                 setTextIfChanged('pwr-therm-pa2', th.pa2 || th.pa || '--');
                 setTextIfChanged('pwr-therm-pmic', th.pmic || '--');
                 setTextIfChanged('pwr-therm-tcxo', th.tcxo || '--');
@@ -3266,16 +3298,16 @@
                 let peakName = '--';
                 const thermItems = [
                     { name: 'ARM CPU', val: th.cpu },
-                    { name: '5G Core', val: th['5g'] },
-                    { name: 'Hexagon DSP', val: th.q6 },
+                    { name: '5G Core', val: t5g },
+                    { name: 'Hexagon DSP', val: tQ6 },
                     { name: 'IPA Engine', val: th.ipa },
-                    { name: 'RF PA', val: th.pa },
+                    { name: 'RF PA', val: th.pa || th.pa1 },
                     { name: 'PMIC', val: th.pmic },
                     { name: 'TCXO Clock', val: th.tcxo },
                     { name: 'Outer Case', val: th.case }
                 ];
                 thermItems.forEach(item => {
-                    if (item.val) {
+                    if (item.val && item.val !== '--') {
                         const n = parseFloat(String(item.val).replace(/[^\d.-]/g, ''));
                         if (!isNaN(n) && n > peakVal) {
                             peakVal = n;
@@ -3286,6 +3318,8 @@
                 if (peakVal > 0) {
                     setTextIfChanged('pwr-peak-temp-val', peakVal.toFixed(1) + '°C');
                     setTextIfChanged('pwr-peak-temp-component', peakName);
+                    const coolMargin = Math.max(0, 85.0 - peakVal);
+                    setTextIfChanged('pwr-live-therm-margin', `+${coolMargin.toFixed(1)}°C Safe`);
                     const pkBadge = document.getElementById('pwr-peak-temp-badge');
                     if (pkBadge) {
                         if (peakVal >= 75) {

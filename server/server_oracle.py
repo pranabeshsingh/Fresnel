@@ -1393,6 +1393,8 @@ def build_telemetry_dict(r):
         "thermals": {
             "cpu": t_cpu,
             "mdm_5g": t_mdm,
+            "5g": t_mdm,
+            "q6": str(r.get("temp_q6") or t_mdm),
             "pa": t_pa,
             "ipa": t_ipa,
             "pmic": str(r.get("temp_pmic") or "--"),
