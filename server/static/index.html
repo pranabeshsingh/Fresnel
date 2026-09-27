@@ -85,6 +85,32 @@
         .leaflet-popup-tip {
             background: rgba(15, 23, 42, 0.95) !important;
         }
+        .leaflet-control-layers {
+            background: rgba(15, 23, 42, 0.9) !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            border-radius: 8px !important;
+            color: #f8fafc !important;
+            font-size: 11px !important;
+            backdrop-filter: blur(8px) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+            padding: 8px 12px !important;
+        }
+        .leaflet-control-layers-base label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            margin: 4px 0;
+            color: #e2e8f0;
+        }
+        .leaflet-control-attribution {
+            background: rgba(8, 12, 20, 0.8) !important;
+            color: #64748b !important;
+            font-size: 9px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #38bdf8 !important;
+        }
         :root {
             --bg-base: #080c14;
             --bg-card: rgba(15, 23, 42, 0.75);
@@ -4705,15 +4731,36 @@
 
             if (!travelMap) {
                 travelMap = L.map('tower-leaflet-map', {
-                    attributionControl: false,
+                    attributionControl: true,
                     zoomControl: true
                 }).setView([12.9716, 77.5946], 12);
 
-                // CartoDB DarkMatter tiles (dark mode map)
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                // 100% Free & Open Community Base Layers
+                const osmStandard = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    subdomains: 'abcd'
-                }).addTo(travelMap);
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+                });
+
+                const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics'
+                });
+
+                const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 17,
+                    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> | Style: &copy; <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a>'
+                });
+
+                // Default layer: OpenStreetMap
+                osmStandard.addTo(travelMap);
+
+                // Layer Switcher
+                const baseLayers = {
+                    "🗺️ OpenStreetMap": osmStandard,
+                    "🛰️ Satellite Imagery": esriSatellite,
+                    "⛰️ OpenTopoMap": openTopo
+                };
+                L.control.layers(baseLayers, null, { position: 'topright' }).addTo(travelMap);
             }
 
             travelMap.invalidateSize();
