@@ -938,16 +938,17 @@ sub sample_and_emit {
             $rf{network_type} = "5G SA";
             $rf{conn_bands} = $rf{nr5g_band} ? $rf{nr5g_band} : "NR5G Band 78";
             $rf{provider} =~ s/4G/True5G/ if $rf{provider};
-        } elsif ($cops_act eq "7" || $cereg_act eq "7") {
-            if ($has_nr && ($cops_act eq "13" || $cereg_act eq "13")) {
+        } elsif ($cops_act eq "7" || $cereg_act eq "7" || $cops_act eq "13" || $cereg_act eq "13") {
+            if ($has_nr || $cops_act eq "13" || $cereg_act eq "13") {
                 $rf{is_5g} = 1;
                 $rf{network_type} = "5G NSA";
+                $rf{nr5g_band} ||= "n78";
                 if ($rf{lte_band} && $rf{nr5g_band}) {
                     $rf{conn_bands} = "$rf{lte_band} + $rf{nr5g_band}";
                 } elsif ($rf{nr5g_band}) {
                     $rf{conn_bands} = "LTE + $rf{nr5g_band}";
                 } else {
-                    $rf{conn_bands} = "LTE + NR5G";
+                    $rf{conn_bands} = ($rf{lte_band} ? "$rf{lte_band} + " : "") . "n78";
                 }
             } else {
                 $rf{is_5g} = 0;
@@ -956,10 +957,6 @@ sub sample_and_emit {
                 $rf{nr5g_band} = "";
                 $rf{provider} =~ s/True5G/4G/ if $rf{provider};
             }
-        } elsif ($cops_act eq "13" || $cereg_act eq "13") {
-            $rf{is_5g} = 1;
-            $rf{network_type} = "5G NSA";
-            $rf{conn_bands} = ($rf{lte_band} && $rf{nr5g_band}) ? "$rf{lte_band} + $rf{nr5g_band}" : "LTE + NR5G";
         } elsif ($cops_act eq "2") {
             $rf{is_5g} = 0;
             $rf{network_type} = "3G UTRAN";
