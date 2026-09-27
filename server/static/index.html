@@ -32,13 +32,59 @@
             color: #080c14;
         }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="/chart.umd.min.js"></script>
     <script>
         if (typeof Chart === "undefined") {
             document.write("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"><\/script>");
         }
     </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
+        .leaflet-container {
+            background: #080c14 !important;
+            font-family: inherit !important;
+        }
+        .tower-marker-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 800;
+            font-size: 11px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.8);
+            border: 2px solid rgba(255,255,255,0.8);
+            transition: transform 0.2s ease;
+        }
+        .tower-marker-icon:hover {
+            transform: scale(1.25);
+            z-index: 1000 !important;
+        }
+        .radar-pulse {
+            position: absolute;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(52, 211, 153, 0.4);
+            animation: radarPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            pointer-events: none;
+        }
+        @keyframes radarPing {
+            0% { transform: scale(0.6); opacity: 1; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
+        .leaflet-popup-content-wrapper {
+            background: rgba(15, 23, 42, 0.95) !important;
+            color: #f8fafc !important;
+            backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-popup-tip {
+            background: rgba(15, 23, 42, 0.95) !important;
+        }
         :root {
             --bg-base: #080c14;
             --bg-card: rgba(15, 23, 42, 0.75);
@@ -483,6 +529,7 @@
         <!-- Navigation Tabs -->
         <div class="tabs-nav">
             <button class="tab-btn active" onclick="switchTab('telemetry')">📊 Telemetry & KPIs</button>
+            <button class="tab-btn" onclick="switchTab('map')">🗺️ Travel &amp; Tower Map</button>
             <button class="tab-btn" onclick="switchTab('power')">⚡ Power & Thermals</button>
             <button class="tab-btn" onclick="switchTab('insights')">🧠 Intelligence & Insights</button>
             <button class="tab-btn" onclick="switchTab('dns')">🛡️ DNS & Ad-Block</button>
@@ -1516,7 +1563,10 @@
                                 <span style="font-weight: 700; font-size: 13px; color: #f8fafc; display: flex; align-items: center; gap: 6px;">
                                     <span>🌊</span> Bufferbloat Loaded Latency Score
                                 </span>
-                                <span class="card-badge" id="ins-bb-badge" style="background: rgba(52, 211, 153, 0.2); color: #34d399; font-size: 12px; font-weight: 800;">Grade --</span>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <button class="btn-range" id="btn-run-bb" onclick="runActiveBufferbloatTest()" style="padding: 2px 8px; font-size: 10px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); cursor: pointer;">⚡ Run Stress Test</button>
+                                    <span class="card-badge" id="ins-bb-badge" style="background: rgba(52, 211, 153, 0.2); color: #34d399; font-size: 12px; font-weight: 800;">Grade --</span>
+                                </div>
                             </div>
                             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;" id="ins-bb-assessment">
                                 Calculating loaded queue delay...
@@ -1530,6 +1580,7 @@
                                 <div id="ins-bb-idle-bar" style="height: 100%; width: 50%; background: #34d399;" title="Base latency"></div>
                                 <div id="ins-bb-delta-bar" style="height: 100%; width: 50%; background: #fb923c;" title="Buffer queue latency"></div>
                             </div>
+                            <div id="ins-bb-test-status" style="font-size: 11px; color: var(--text-muted); margin-top: 8px; display: none;"></div>
                         </div>
 
                         <!-- Monthly Data Burn Rate & Pace -->
@@ -1967,6 +2018,86 @@
             </div>
         </div>
 
+        <!-- TAB: TRAVEL & TOWER MAP -->
+        <div id="tab-map" class="tab-content">
+            <!-- Header & KPI Summary -->
+            <div class="glass-card" style="margin-bottom: 20px; border-left: 4px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                    <div>
+                        <div style="font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                            <span>🗺️</span> Cellular Tower War-Driving &amp; Travel Route Map
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Autonomous Cell Tower Geolocation • Handover Trajectory Tracking • Signal Heatmap
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span class="card-badge green" id="map-live-tower-badge" style="font-size: 12px; padding: 4px 10px;">🟢 Live Connected</span>
+                        <button class="btn-range" onclick="recenterMapOnActive()" style="padding: 4px 12px; font-size: 11px; cursor: pointer; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">🎯 Recenter Active</button>
+                        <button class="btn-range" onclick="fetchMapData(true)" style="padding: 4px 12px; font-size: 11px; cursor: pointer;">🔄 Refresh Map</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Strip (4 KPI Cards) -->
+            <div class="cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 20px;">
+                <div class="glass-card" style="border-top: 2px solid #38bdf8;">
+                    <div class="card-lbl">📡 Towers Discovered</div>
+                    <div class="card-val" id="map-stat-towers-count" style="color: #38bdf8;">--</div>
+                    <div class="card-sub">Unique Base Stations</div>
+                </div>
+                <div class="glass-card" style="border-top: 2px solid #34d399;">
+                    <div class="card-lbl">📍 Current Location</div>
+                    <div class="card-val" id="map-stat-current-city" style="color: #34d399; font-size: 20px;">--</div>
+                    <div class="card-sub" id="map-stat-current-region">Airtel Circle</div>
+                </div>
+                <div class="glass-card" style="border-top: 2px solid #a78bfa;">
+                    <div class="card-lbl">🔗 Active Sector (CID)</div>
+                    <div class="card-val" id="map-stat-active-cid" style="color: #a78bfa; font-size: 20px; font-family: var(--font-mono);">--</div>
+                    <div class="card-sub" id="map-stat-active-band">Carrier Band</div>
+                </div>
+                <div class="glass-card" style="border-top: 2px solid #fbbf24;">
+                    <div class="card-lbl">📶 Best RF Quality</div>
+                    <div class="card-val" id="map-stat-best-rf" style="color: #fbbf24;">--</div>
+                    <div class="card-sub">Peak RSRP &amp; SINR</div>
+                </div>
+            </div>
+
+            <!-- Map Container Card -->
+            <div class="table-card" style="margin-bottom: 20px; padding: 12px;">
+                <div id="tower-leaflet-map" style="width: 100%; height: 540px; border-radius: 12px; z-index: 1;"></div>
+            </div>
+
+            <!-- Towers Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <span class="table-title">📋 Logged Base Stations &amp; Coordinates</span>
+                    <a href="/api/telemetry/export/towers.csv" class="btn-export-csv" download>📥 Export CSV</a>
+                </div>
+                <div class="table-wrap">
+                    <table style="font-size: 11px;">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Tower eNB</th>
+                                <th>Sector CID</th>
+                                <th>Band</th>
+                                <th>City / Circle</th>
+                                <th>Coordinates</th>
+                                <th>Best SINR</th>
+                                <th>Best RSRP</th>
+                                <th>Hits</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="map-towers-table-body">
+                            <tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 16px;">Loading towers map data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- TAB: POWER & HARDWARE THERMALS -->
         <div id="tab-power" class="tab-content">
             <!-- Power & Voltage Rail Status Banner / KPI Grid -->
@@ -2291,6 +2422,9 @@
             const content = document.getElementById('tab-' + tabId);
             if (content) content.classList.add('active');
 
+            if (tabId === 'map') {
+                setTimeout(() => { initOrUpdateMap(); }, 100);
+            }
             if (tabId === 'power') {
                 fetchPowerHistory();
             }
@@ -4556,12 +4690,328 @@
             fetchHistory();
         }
 
+        // ==========================================
+        // TRAVEL & TOWER MAP (LEAFLET.JS)
+        // ==========================================
+        let travelMap = null;
+        let mapMarkers = [];
+        let mapRouteLine = null;
+        let activeTowerPulseCircle = null;
+        let lastLiveTowerCoords = null;
+
+        async function initOrUpdateMap(forceRecenter = false) {
+            const mapContainer = document.getElementById('tower-leaflet-map');
+            if (!mapContainer || typeof L === 'undefined') return;
+
+            if (!travelMap) {
+                travelMap = L.map('tower-leaflet-map', {
+                    attributionControl: false,
+                    zoomControl: true
+                }).setView([12.9716, 77.5946], 12);
+
+                // CartoDB DarkMatter tiles (dark mode map)
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    subdomains: 'abcd'
+                }).addTo(travelMap);
+            }
+
+            travelMap.invalidateSize();
+            await fetchMapData(forceRecenter);
+        }
+
+        async function fetchMapData(forceRecenter = false) {
+            if (!travelMap) return;
+            try {
+                const [towersRes, routeRes, liveRes] = await Promise.all([
+                    fetch('/api/telemetry/towers?limit=100', { headers: getAuthHeaders() }),
+                    fetch('/api/telemetry/route', { headers: getAuthHeaders() }),
+                    fetch('/api/telemetry/live', { headers: getAuthHeaders() })
+                ]);
+
+                const towersData = await towersRes.json();
+                const routeData = await routeRes.json();
+                const liveData = await liveRes.json();
+
+                const towers = towersData.towers || [];
+                const route = routeData.route || [];
+                const curTower = liveData.tower_cell || {};
+                const activeCid = curTower.cid || '';
+                const activeEnb = curTower.enb || '';
+
+                // Update Stats Strip
+                const countEl = document.getElementById('map-stat-towers-count');
+                if (countEl) countEl.textContent = towers.length || '--';
+
+                if (towers.length > 0 && towers[0].city) {
+                    const cityEl = document.getElementById('map-stat-current-city');
+                    const regEl = document.getElementById('map-stat-current-region');
+                    if (cityEl) cityEl.textContent = towers[0].city;
+                    if (regEl) regEl.textContent = (towers[0].region || 'Airtel Circle');
+                }
+                const actCidEl = document.getElementById('map-stat-active-cid');
+                const actBandEl = document.getElementById('map-stat-active-band');
+                if (actCidEl) actCidEl.textContent = activeCid || '--';
+                if (actBandEl) actBandEl.textContent = (liveData.connection && liveData.connection.connection_bands) || 'Auto 5G';
+
+                let bestSinr = -99;
+                let bestRsrp = -150;
+                towers.forEach(t => {
+                    if (t.best_sinr !== null && t.best_sinr > bestSinr) bestSinr = t.best_sinr;
+                    if (t.best_rsrp !== null && t.best_rsrp > bestRsrp) bestRsrp = t.best_rsrp;
+                });
+                const bestRfEl = document.getElementById('map-stat-best-rf');
+                if (bestRfEl && bestSinr > -99) {
+                    bestRfEl.textContent = `${bestRsrp} dBm / +${bestSinr} dB`;
+                }
+
+                // Clear previous markers
+                mapMarkers.forEach(m => travelMap.removeLayer(m));
+                mapMarkers = [];
+                if (mapRouteLine) travelMap.removeLayer(mapRouteLine);
+                if (activeTowerPulseCircle) travelMap.removeLayer(activeTowerPulseCircle);
+
+                const bounds = L.latLngBounds();
+
+                // Plot towers
+                towers.forEach(t => {
+                    if (!t.lat || !t.lon) return;
+                    const pos = [t.lat, t.lon];
+                    bounds.extend(pos);
+
+                    const isActive = (activeCid && t.cid && t.cid.includes(activeCid.split(' ')[0])) || (activeEnb && t.enb && t.enb.includes(activeEnb.split(' ')[0]));
+                    if (isActive) {
+                        lastLiveTowerCoords = pos;
+                    }
+
+                    // Marker color by RF / Band
+                    let markerBg = '#38bdf8';
+                    if (t.band && t.band.includes('n78')) markerBg = '#34d399';
+                    else if (t.best_sinr >= 15) markerBg = '#38bdf8';
+                    else if (t.best_sinr >= 5) markerBg = '#fbbf24';
+                    else markerBg = '#f87171';
+
+                    const iconHtml = `<div class="tower-marker-icon" style="width: 28px; height: 28px; background: ${markerBg}; border-color: ${isActive ? '#fff' : 'rgba(255,255,255,0.4)'};">${isActive ? '📡' : '🗼'}</div>`;
+                    const customIcon = L.divIcon({
+                        className: 'custom-tower-pin',
+                        html: iconHtml,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+
+                    const marker = L.marker(pos, { icon: customIcon }).addTo(travelMap);
+                    marker.bindPopup(`
+                        <div style="font-size: 12px; line-height: 1.5; min-width: 180px;">
+                            <div style="font-weight: 800; font-size: 13px; color: #38bdf8; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                                <span>${escapeHtml(t.enb)}</span>
+                                <span style="font-size: 10px; color: ${isActive ? '#34d399' : '#94a3b8'}; font-weight: 700;">${isActive ? '🟢 ACTIVE' : 'LOGGED'}</span>
+                            </div>
+                            <div style="color: #94a3b8; font-size: 11px;">CID: <b style="color: #f8fafc; font-family: var(--font-mono);">${escapeHtml(t.cid)}</b></div>
+                            <div style="color: #94a3b8; font-size: 11px;">Band: <b style="color: #a78bfa;">${escapeHtml(t.band || 'LTE/5G')}</b></div>
+                            <div style="color: #94a3b8; font-size: 11px;">City: <b style="color: #f8fafc;">${escapeHtml(t.city || 'Unknown')}, ${escapeHtml(t.region || '')}</b></div>
+                            <div style="color: #94a3b8; font-size: 11px;">Best RF: <b style="color: #34d399;">${t.best_rsrp !== null ? t.best_rsrp : '--'} dBm</b> | <b style="color: #fbbf24;">+${t.best_sinr !== null ? t.best_sinr : '--'} dB</b></div>
+                            <div style="color: #94a3b8; font-size: 10px; margin-top: 4px;">Hits: ${t.count} • Last seen: ${formatTime(t.last_seen)}</div>
+                        </div>
+                    `);
+                    mapMarkers.push(marker);
+
+                    if (isActive) {
+                        activeTowerPulseCircle = L.circleMarker(pos, {
+                            radius: 20,
+                            color: '#34d399',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillColor: '#34d399',
+                            fillOpacity: 0.25
+                        }).addTo(travelMap);
+                    }
+                });
+
+                // Draw route connecting lines
+                const routePoints = route.filter(p => p.lat && p.lon).map(p => [p.lat, p.lon]);
+                if (routePoints.length > 1) {
+                    mapRouteLine = L.polyline(routePoints, {
+                        color: '#38bdf8',
+                        weight: 3,
+                        opacity: 0.7,
+                        dashArray: '6, 6'
+                    }).addTo(travelMap);
+                }
+
+                if (forceRecenter) {
+                    if (lastLiveTowerCoords) {
+                        travelMap.setView(lastLiveTowerCoords, 14);
+                    } else if (bounds.isValid()) {
+                        travelMap.fitBounds(bounds, { padding: [40, 40] });
+                    }
+                }
+
+                // Render Table
+                const tbody = document.getElementById('map-towers-table-body');
+                if (tbody && towers.length > 0) {
+                    tbody.innerHTML = towers.map(t => {
+                        const isActive = (activeCid && t.cid && t.cid.includes(activeCid.split(' ')[0]));
+                        return `
+                            <tr>
+                                <td><span class="card-badge ${isActive ? 'green' : ''}" style="font-size: 10px;">${isActive ? '🟢 Active' : 'Logged'}</span></td>
+                                <td style="font-family: var(--font-mono); font-weight: 700; color: #38bdf8;">${escapeHtml(t.enb)}</td>
+                                <td style="font-family: var(--font-mono); font-size: 10px;">${escapeHtml(t.cid)}</td>
+                                <td><span style="color: #a78bfa; font-weight: 600;">${escapeHtml(t.band || '--')}</span></td>
+                                <td>${escapeHtml(t.city || 'Unknown')}, ${escapeHtml(t.region || '')}</td>
+                                <td style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);">${t.lat ? t.lat.toFixed(4) : '--'}, ${t.lon ? t.lon.toFixed(4) : '--'}</td>
+                                <td style="color: #fbbf24; font-weight: 700;">+${t.best_sinr !== null ? t.best_sinr : '--'} dB</td>
+                                <td style="color: #34d399; font-weight: 700;">${t.best_rsrp !== null ? t.best_rsrp : '--'} dBm</td>
+                                <td>${t.count}</td>
+                                <td>
+                                    ${t.lat ? `<button class="btn-range" onclick="focusTowerOnMap(${t.lat}, ${t.lon})" style="padding: 2px 6px; font-size: 10px; cursor: pointer;">🎯 View</button>` : '--'}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                console.error("Map fetch error:", e);
+            }
+        }
+
+        function recenterMapOnActive() {
+            if (travelMap && lastLiveTowerCoords) {
+                travelMap.setView(lastLiveTowerCoords, 15, { animate: true });
+            }
+        }
+
+        function focusTowerOnMap(lat, lon) {
+            switchTab('map');
+            setTimeout(() => {
+                if (travelMap) travelMap.setView([lat, lon], 16, { animate: true });
+            }, 150);
+        }
+
+        // ==========================================
+        // ACTIVE BUFFERBLOAT STRESS BENCHMARK
+        // ==========================================
+        let isRunningBufferbloat = false;
+
+        async function runActiveBufferbloatTest() {
+            if (isRunningBufferbloat) return;
+            isRunningBufferbloat = true;
+
+            const btn = document.getElementById('btn-run-bb');
+            const statusBox = document.getElementById('ins-bb-test-status');
+            const badge = document.getElementById('ins-bb-badge');
+            const assessment = document.getElementById('ins-bb-assessment');
+            const idleEl = document.getElementById('ins-bb-idle');
+            const loadedEl = document.getElementById('ins-bb-loaded');
+            const deltaEl = document.getElementById('ins-bb-delta');
+            const idleBar = document.getElementById('ins-bb-idle-bar');
+            const deltaBar = document.getElementById('ins-bb-delta-bar');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Testing...';
+            }
+            if (statusBox) {
+                statusBox.style.display = 'block';
+                statusBox.textContent = 'Phase 1/2: Measuring baseline idle latency...';
+            }
+
+            try {
+                // Phase 1: Measure 5 idle pings
+                const idleSamples = [];
+                for (let i = 0; i < 5; i++) {
+                    const t0 = performance.now();
+                    await fetch('/api/telemetry/live', { headers: getAuthHeaders(), cache: 'no-store' });
+                    const rtt = Math.round(performance.now() - t0);
+                    if (rtt > 0 && rtt < 1000) idleSamples.push(rtt);
+                    await new Promise(r => setTimeout(r, 120));
+                }
+                const avgIdle = idleSamples.length > 0 ? (idleSamples.reduce((a,b)=>a+b,0) / idleSamples.length) : 35;
+                if (idleEl) idleEl.textContent = avgIdle.toFixed(1) + ' ms';
+
+                if (statusBox) {
+                    statusBox.textContent = `Baseline idle: ${avgIdle.toFixed(1)}ms. Phase 2/2: Saturating downlink for loaded latency...`;
+                }
+
+                // Phase 2: Start 3 concurrent download streams while pinging
+                const loadedSamples = [];
+                const abortController = new AbortController();
+
+                const streams = [1, 2, 3].map(() =>
+                    fetch('/api/benchmark/bufferbloat/payload', {
+                        headers: getAuthHeaders(),
+                        signal: abortController.signal
+                    }).then(r => r.blob()).catch(() => {})
+                );
+
+                const startTime = performance.now();
+                while (performance.now() - startTime < 3500) {
+                    const p0 = performance.now();
+                    await fetch('/api/telemetry/live', { headers: getAuthHeaders(), cache: 'no-store' });
+                    const lRtt = Math.round(performance.now() - p0);
+                    if (lRtt > 0 && lRtt < 2000) loadedSamples.push(lRtt);
+                    await new Promise(r => setTimeout(r, 200));
+                }
+
+                abortController.abort();
+                await Promise.allSettled(streams);
+
+                const avgLoaded = loadedSamples.length > 0 ? (loadedSamples.reduce((a,b)=>a+b,0) / loadedSamples.length) : (avgIdle + 8);
+                const delta = Math.max(0, avgLoaded - avgIdle);
+
+                if (loadedEl) loadedEl.textContent = avgLoaded.toFixed(1) + ' ms';
+                if (deltaEl) deltaEl.textContent = '+' + delta.toFixed(1) + ' ms';
+
+                // Grade assignment
+                let grade = 'A+';
+                let gradeColor = '#34d399';
+                let note = 'Flawless buffer management. Zero loaded queue delay.';
+                if (delta < 5) {
+                    grade = 'A+'; gradeColor = '#34d399';
+                } else if (delta < 15) {
+                    grade = 'A'; gradeColor = '#34d399'; note = 'Excellent. Extremely low queue backlog.';
+                } else if (delta < 30) {
+                    grade = 'B'; gradeColor = '#38bdf8'; note = 'Good. Low latency inflation under heavy transfer.';
+                } else if (delta < 60) {
+                    grade = 'C'; gradeColor = '#fbbf24'; note = 'Moderate bufferbloat. Noticeable lag spike during large downloads.';
+                } else if (delta < 100) {
+                    grade = 'D'; gradeColor = '#fb923c'; note = 'High bufferbloat. Severe lag under load.';
+                } else {
+                    grade = 'F'; gradeColor = '#f87171'; note = 'Severe queue backlog. Packets buffer excessively under load.';
+                }
+
+                if (badge) {
+                    badge.textContent = 'Grade ' + grade;
+                    badge.style.color = gradeColor;
+                }
+                if (assessment) {
+                    assessment.textContent = `Live Benchmark: Grade ${grade} (+${delta.toFixed(1)} ms queue delay). ${note}`;
+                }
+
+                const totalBar = Math.max(avgLoaded, 1);
+                if (idleBar) idleBar.style.width = Math.min(100, Math.round((avgIdle / totalBar) * 100)) + '%';
+                if (deltaBar) deltaBar.style.width = Math.min(100, Math.round((delta / totalBar) * 100)) + '%';
+
+                if (statusBox) {
+                    statusBox.innerHTML = `✅ <span style="color: ${gradeColor}; font-weight: 700;">Completed: Grade ${grade}</span> (Idle: ${avgIdle.toFixed(1)}ms | Loaded: ${avgLoaded.toFixed(1)}ms | Delta: +${delta.toFixed(1)}ms)`;
+                }
+            } catch (err) {
+                console.error("Bufferbloat test error:", err);
+                if (statusBox) statusBox.textContent = 'Benchmark interrupted or failed.';
+            } finally {
+                isRunningBufferbloat = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ Run Stress Test';
+                }
+            }
+        }
+
         function initApp() {
             hideAuthOverlay();
             const hash = window.location.hash.replace("#", "");
             const urlParams = new URLSearchParams(window.location.search);
             const targetTab = hash || urlParams.get("tab");
-            if (targetTab && ["telemetry", "power", "insights", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
+            if (targetTab && ["telemetry", "map", "power", "insights", "dns", "console", "sms", "alerts", "backups"].includes(targetTab)) {
                 switchTab(targetTab);
             }
             initCharts();

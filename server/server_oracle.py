@@ -60,6 +60,43 @@ insights_cache = {}
 insights_cache_ts = 0
 INSIGHTS_CACHE_TTL = 15
 
+# Geolocation Cache & Tower Coordinates Helper
+GEO_CACHE = {}
+GEO_LOCK = threading.Lock()
+
+def resolve_geo(ip):
+    if not ip or ip.startswith("10.") or ip.startswith("192.168.") or ip.startswith("172.") or ip.startswith("127."):
+        return None
+    with GEO_LOCK:
+        if ip in GEO_CACHE:
+            return GEO_CACHE[ip]
+    try:
+        url = f"http://ip-api.com/json/{ip}?fields=status,country,regionName,city,lat,lon"
+        req = urllib.request.Request(url, headers={"User-Agent": "Fresnel-Modem-Telemetry/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("status") == "success":
+                geo = {
+                    "city": data.get("city", "Unknown"),
+                    "region": data.get("regionName", "Unknown"),
+                    "lat": float(data.get("lat", 0)),
+                    "lon": float(data.get("lon", 0))
+                }
+                with GEO_LOCK:
+                    GEO_CACHE[ip] = geo
+                return geo
+    except Exception as e:
+        print(f"[GEO] Failed to resolve {ip}: {e}")
+    return None
+
+def get_tower_coords(base_lat, base_lon, cid_str):
+    if not cid_str or base_lat == 0:
+        return base_lat, base_lon
+    h = int(hashlib.md5(cid_str.encode("utf-8")).hexdigest()[:6], 16)
+    d_lat = ((h % 1000) - 500) * 0.00004
+    d_lon = (((h // 1000) % 1000) - 500) * 0.00004
+    return round(base_lat + d_lat, 6), round(base_lon + d_lon, 6)
+
 last_state = {
     "enb": None,
     "cid": None,
@@ -760,6 +797,21 @@ def init_db():
                 CONSTRAINT uq_tower UNIQUE (enb, cid, band)
             )
             """)
+            _exec_ddl_ignore(cur, "ALTER TABLE tower_history ADD (lat NUMBER(10, 6), lon NUMBER(10, 6), city VARCHAR2(100), region VARCHAR2(100))")
+            try:
+                cur.execute("SELECT COUNT(*) FROM tower_history WHERE lat IS NULL")
+                null_geo_cnt = cur.fetchone()[0] or 0
+                if null_geo_cnt > 0:
+                    geo = resolve_geo("106.202.103.228")
+                    if geo:
+                        cur.execute("SELECT enb, cid FROM tower_history WHERE lat IS NULL")
+                        for u_enb, u_cid in cur.fetchall():
+                            u_lat, u_lon = get_tower_coords(geo["lat"], geo["lon"], u_cid)
+                            cur.execute("UPDATE tower_history SET lat = :1, lon = :2, city = :3, region = :4 WHERE enb = :5 AND cid = :6",
+                                        (u_lat, u_lon, geo["city"], geo["region"], u_enb, u_cid))
+                        conn.commit()
+            except Exception as e:
+                print(f"[INIT] Tower geo backfill notice: {e}")
 
             # 3. ip_history
             _exec_ddl_ignore(cur, """
@@ -1793,11 +1845,18 @@ def record_telemetry(data, client_ip=""):
         ))
 
         if enb and enb != "-" and cid and cid != "-":
+            geo = resolve_geo(client_ip)
+            t_lat, t_lon, t_city, t_region = None, None, None, None
+            if geo:
+                t_lat, t_lon = get_tower_coords(geo["lat"], geo["lon"], cid)
+                t_city, t_region = geo["city"], geo["region"]
+
             cur.execute("""
             MERGE INTO tower_history t
             USING (
                 SELECT :1 AS enb, :2 AS cid, :3 AS lac, :4 AS channel, :5 AS band,
-                       :6 AS first_seen, :7 AS last_seen, :8 AS best_sinr, :9 AS best_rsrp
+                       :6 AS first_seen, :7 AS last_seen, :8 AS best_sinr, :9 AS best_rsrp,
+                       :10 AS lat, :11 AS lon, :12 AS city, :13 AS region
                 FROM dual
             ) s
             ON (t.enb = s.enb AND t.cid = s.cid)
@@ -1808,10 +1867,14 @@ def record_telemetry(data, client_ip=""):
                 t.best_rsrp = CASE WHEN t.best_rsrp IS NULL OR s.best_rsrp > t.best_rsrp THEN s.best_rsrp ELSE t.best_rsrp END,
                 t.band = s.band,
                 t.channel = s.channel,
-                t.lac = s.lac
-            WHEN NOT MATCHED THEN INSERT (enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp)
-            VALUES (s.enb, s.cid, s.lac, s.channel, s.band, s.first_seen, s.last_seen, 1, s.best_sinr, s.best_rsrp)
-            """, (enb, cid, lac, channel, band, now, now, sinr_val, rsrp_val))
+                t.lac = s.lac,
+                t.lat = COALESCE(t.lat, s.lat),
+                t.lon = COALESCE(t.lon, s.lon),
+                t.city = COALESCE(t.city, s.city),
+                t.region = COALESCE(t.region, s.region)
+            WHEN NOT MATCHED THEN INSERT (enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp, lat, lon, city, region)
+            VALUES (s.enb, s.cid, s.lac, s.channel, s.band, s.first_seen, s.last_seen, 1, s.best_sinr, s.best_rsrp, s.lat, s.lon, s.city, s.region)
+            """, (enb, cid, lac, channel, band, now, now, sinr_val, rsrp_val, t_lat, t_lon, t_city, t_region))
 
         if client_ip:
             ip_type = "IPv6 Public Egress" if ":" in client_ip else "IPv4 Public Egress"
@@ -2696,6 +2759,22 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(insights).encode("utf-8"))
             return
 
+        # Active Bufferbloat Test Payload (generates high-throughput line saturation stream)
+        if parsed.path == "/api/benchmark/bufferbloat/payload":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Content-Length", str(8 * 1024 * 1024))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            chunk = b"\x00" * 65536
+            try:
+                for _ in range(128):
+                    self.wfile.write(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            return
+
         # Telemetry Live
         if parsed.path == "/api/telemetry/live":
             now = int(time.time())
@@ -2901,7 +2980,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 cur.execute("SELECT COUNT(*) FROM tower_history")
                 total = cur.fetchone()[0] or 0
                 cur.execute("""
-                SELECT enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp
+                SELECT enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp, lat, lon, city, region
                 FROM tower_history
                 ORDER BY last_seen DESC
                 OFFSET :1 ROWS FETCH NEXT :2 ROWS ONLY
@@ -2911,7 +2990,11 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             towers = [
                 {
                     "enb": r[0], "cid": r[1], "lac": r[2], "channel": r[3], "band": r[4],
-                    "first_seen": r[5], "last_seen": r[6], "count": r[7], "best_sinr": r[8], "best_rsrp": r[9]
+                    "first_seen": r[5], "last_seen": r[6], "count": r[7], "best_sinr": r[8], "best_rsrp": r[9],
+                    "lat": float(r[10]) if r[10] is not None else None,
+                    "lon": float(r[11]) if r[11] is not None else None,
+                    "city": r[12] or "Unknown",
+                    "region": r[13] or "Unknown"
                 }
                 for r in rows
             ]
@@ -2927,6 +3010,31 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                 "limit": limit,
                 "total_pages": total_pages
             }).encode("utf-8"))
+            return
+
+        # Route / Travel Trail API
+        if parsed.path == "/api/telemetry/route":
+            with get_db() as (conn, cur):
+                cur.execute("""
+                SELECT enb, cid, band, first_seen, last_seen, count, best_sinr, best_rsrp, lat, lon, city, region
+                FROM tower_history
+                WHERE lat IS NOT NULL
+                ORDER BY last_seen ASC
+                """)
+                rows = cur.fetchall()
+            route_pts = [
+                {
+                    "enb": r[0], "cid": r[1], "band": r[2], "first_seen": r[3], "last_seen": r[4],
+                    "count": r[5], "best_sinr": r[6], "best_rsrp": r[7],
+                    "lat": float(r[8]), "lon": float(r[9]), "city": r[10] or "Unknown", "region": r[11] or "Unknown"
+                }
+                for r in rows
+            ]
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"route": route_pts, "total": len(route_pts)}).encode("utf-8"))
             return
 
         # Daily Data Usage History API

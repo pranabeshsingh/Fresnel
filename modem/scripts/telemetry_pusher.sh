@@ -228,13 +228,9 @@ while true; do
                         OUT=$(execute_at "$CMD_PAYLOAD")
                         ;;
                     USSD)
-                        OUT=$(perl -e '
-                            use strict; use warnings; use Fcntl qw(:flock O_RDONLY O_WRONLY);
-                            my $code = $ARGV[0];
-                            # Set CUSD
-                            system("perl -e '\''use strict; use warnings; my \$c = \$ARGV[0]; ... '\''");
-                        ' "$CMD_PAYLOAD")
-                        if [ -z "$OUT" ]; then
+                        if [ -x /usrdata/simpleadmin/scripts/ussd_handler.pl ]; then
+                            OUT=$(perl /usrdata/simpleadmin/scripts/ussd_handler.pl "$CMD_PAYLOAD" 2>&1)
+                        else
                             OUT=$(execute_at "AT+CUSD=1,\"$CMD_PAYLOAD\",15")
                         fi
                         ;;

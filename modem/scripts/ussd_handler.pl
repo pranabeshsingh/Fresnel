@@ -3,13 +3,24 @@ use strict;
 use warnings;
 use Fcntl qw(:flock O_RDONLY O_WRONLY);
 
-print "Content-type: application/json\r\n";
-print "Cache-Control: no-cache\r\n\r\n";
+# Check if running from CLI
+my $cli_code = "";
+if (@ARGV) {
+    for my $arg (@ARGV) {
+        if ($arg =~ /^--code=(.*)$/) { $cli_code = $1; }
+        elsif ($arg =~ /^\*.*#$/) { $cli_code = $arg; }
+        elsif ($arg !~ /^-/) { $cli_code = $arg; }
+    }
+}
 
 my $query = $ENV{'QUERY_STRING'} || "";
 my $post_data = "";
-if ($ENV{'REQUEST_METHOD'} && $ENV{'REQUEST_METHOD'} eq 'POST') {
-    read(STDIN, $post_data, $ENV{'CONTENT_LENGTH'} || 0);
+if (!$cli_code) {
+    print "Content-type: application/json\r\n";
+    print "Cache-Control: no-cache\r\n\r\n";
+    if ($ENV{'REQUEST_METHOD'} && $ENV{'REQUEST_METHOD'} eq 'POST') {
+        read(STDIN, $post_data, $ENV{'CONTENT_LENGTH'} || 0);
+    }
 }
 my $params_str = $post_data ? "$query&$post_data" : $query;
 
@@ -23,17 +34,19 @@ for my $pair (split(/&/, $params_str)) {
     }
 }
 
-# Validate Auth Token
-my $token = $params{'token'} || "";
-$token =~ s/[^a-fA-F0-9]//g;
+# Validate Auth Token if running as CGI
+if (!$cli_code) {
+    my $token = $params{'token'} || "";
+    $token =~ s/[^a-fA-F0-9]//g;
 
-if (length($token) != 32 || ! -f "/tmp/gw_sessions/$token") {
-    print '{"status":"error","message":"Unauthorized"}';
-    exit(0);
+    if (length($token) != 32 || ! -f "/tmp/gw_sessions/$token") {
+        print '{"status":"error","message":"Unauthorized"}';
+        exit(0);
+    }
 }
 
 my $action = $params{'action'} || "send";
-my $code   = $params{'code'} || "";
+my $code   = $cli_code || $params{'code'} || "";
 $code =~ s/[^0-9*#+]//g;
 
 my $dev = "/dev/smd7";
