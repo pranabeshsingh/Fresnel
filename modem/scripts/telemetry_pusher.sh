@@ -205,14 +205,15 @@ while true; do
         --connect-timeout 3 --max-time 5)
 
     if [ -n "$POLL_RESP" ] && echo "$POLL_RESP" | grep -q '"id"'; then
-        # Parse commands using perl
         perl -e '
             use strict; use warnings;
             my $json_str = $ARGV[0] || "";
-            # Simple extractor for [{"id":1,"command_type":"AT","payload":"ATI"}]
-            while ($json_str =~ /\{\s*"id"\s*:\s*(\d+)\s*,\s*"command_type"\s*:\s*"([^"]+)"\s*,\s*"payload"\s*:\s*"([^"]*)"\s*\}/g) {
+            while ($json_str =~ /"id"\s*:\s*(\d+)\s*,\s*"command_type"\s*:\s*"([^"]+)"\s*,\s*"payload"\s*:\s*("(?:[^"\\]|\\.)*")/g) {
                 my ($id, $type, $payload) = ($1, $2, $3);
-                $payload =~ s/\\n/\n/g; $payload =~ s/\\"/"/g;
+                $payload =~ s/^"|"$//g;
+                $payload =~ s/\\(["\\\/])/$1/g;
+                $payload =~ s/\\n/\n/g;
+                $payload =~ s/\t/ /g;
                 print "$id\t$type\t$payload\n";
             }
         ' "$POLL_RESP" | while IFS="$(printf '\t')" read -r CMD_ID CMD_TYPE CMD_PAYLOAD; do
