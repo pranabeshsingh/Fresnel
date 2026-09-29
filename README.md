@@ -1,5 +1,6 @@
 # Fresnel — 5G Cellular Gateway Suite & Cloud Telemetry
 
+[![CI Tests & Validation](https://github.com/pranabeshsingh/Fresnel/actions/workflows/ci.yml/badge.svg)](https://github.com/pranabeshsingh/Fresnel/actions/workflows/ci.yml)
 [![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](LICENSE)
 [![Platform: Qualcomm SDX55](https://img.shields.io/badge/Modem-Qualcomm%20SDX55-orange.svg)](hardware-guides/01-qualcomm-ipa-architecture.md)
 [![5G: SA & NSA](https://img.shields.io/badge/5G-SA%20%7C%20NSA%20(EN--DC)-green.svg)](hardware-guides/02-5g-sa-vs-nsa-and-ca.md)

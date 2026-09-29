@@ -1,0 +1,71 @@
+name: Release Modem Suite
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-assets:
+    name: Package and Publish Release Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ -n "${{ github.ref_name }}" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="v$(date +'%Y.%m.%d')"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Package Modem Gateway Suite
+        run: |
+          PKG_NAME="fresnel-modem-suite-${{ steps.version.outputs.tag }}"
+          mkdir -p "dist/${PKG_NAME}"
+          
+          # Copy modem components, guides, and documentation
+          cp -r modem/* "dist/${PKG_NAME}/"
+          cp -r hardware-guides "dist/${PKG_NAME}/"
+          cp LICENSE README.md "dist/${PKG_NAME}/"
+
+          cd dist
+          # Create compressed tarball and zip archives
+          tar -czf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
+          zip -rq "${PKG_NAME}.zip" "${PKG_NAME}"
+
+          # Also create generic named archives for easy scripting
+          cp "${PKG_NAME}.tar.gz" "fresnel-modem-suite.tar.gz"
+          cp "${PKG_NAME}.zip" "fresnel-modem-suite.zip"
+
+          # Generate SHA256 checksums
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+      - name: Upload Build Artifacts (for manual workflow runs)
+        uses: actions/upload-artifact@v4
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        with:
+          name: ${{ steps.version.outputs.tag }}
+          path: dist/

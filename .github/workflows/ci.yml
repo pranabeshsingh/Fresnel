@@ -16,36 +16,47 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'server/requirements.txt'
+
+      - name: Install Python Dependencies
         run: |
-          git init .
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            git fetch --depth=1 origin "+refs/pull/${{ github.event.pull_request.number }}/merge:"
-            git checkout --force FETCH_HEAD
-          else
-            git fetch --depth=1 origin "${{ github.sha }}"
-            git checkout --force FETCH_HEAD
-          fi
-          git log -1 --oneline
+          python -m pip install --upgrade pip
+          pip install -r server/requirements.txt flake8
 
       - name: Validate Shell Scripts Syntax
         run: |
           echo "=== Checking Shell Syntax (bash -n) ==="
           for file in modem/deploy_modem.sh \
                       modem/scripts/*.sh \
-                      modem/www/cgi-bin/modem_action; do
+                      modem/www/cgi-bin/modem_action \
+                      scripts/*.sh \
+                      tests/*.sh; do
             if [ -f "$file" ]; then
               echo "Validating $file..."
               bash -n "$file"
             fi
           done
 
+      - name: Run ShellCheck Static Analysis
+        run: |
+          echo "=== Running ShellCheck ==="
+          shellcheck --severity=error \
+            modem/deploy_modem.sh \
+            modem/scripts/*.sh \
+            scripts/*.sh \
+            tests/*.sh
+
       - name: Validate Perl Scripts Syntax
         run: |
           echo "=== Checking Perl Syntax (perl -c) ==="
-          for file in modem/scripts/*.pl; do
+          for file in modem/scripts/*.pl tests/*.pl; do
             if [ -f "$file" ]; then
               echo "Validating $file..."
               perl -c "$file"
@@ -55,14 +66,19 @@ jobs:
       - name: Validate Python Scripts Compilation
         run: |
           echo "=== Checking Python Compilation ==="
-          python3 -m py_compile server/db.py server/server_sqlite.py modem/scripts/doAT.py
+          python3 -m py_compile server/db.py server/server_sqlite.py server/server_oracle.py modem/scripts/doAT.py
+
+      - name: Lint Python Code with flake8
+        run: |
+          echo "=== Linting Python (Syntax and Runtime Fatal Errors) ==="
+          flake8 server modem/scripts --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Validate HTML Markup Integrity
         run: |
           echo "=== Checking HTML Parsing ==="
           python3 -c "
-          import html.parser
-          for fpath in ['modem/www/index.html', 'modem/www/login.html']:
+          import html.parser, glob
+          for fpath in glob.glob('modem/www/**/*.html', recursive=True):
               with open(fpath, 'r', encoding='utf-8') as f:
                   html.parser.HTMLParser().feed(f.read())
               print(f'Valid HTML: {fpath}')
@@ -92,3 +108,22 @@ jobs:
         run: |
           echo "=== Running CGI Action Tests ==="
           bash tests/test_cgi_telemetry.sh
+
+  docker-build-check:
+    name: Docker Container Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Server Image (Verification)
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          push: false
+          tags: fresnel-server:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

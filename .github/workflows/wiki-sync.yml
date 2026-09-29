@@ -1,0 +1,48 @@
+name: Sync Documentation to Wiki
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'wiki/**'
+      - 'scripts/sync_wiki.sh'
+      - '.github/workflows/wiki-sync.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    name: Mirror wiki/ to GitHub Wiki
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Synchronize Wiki Repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Starting GitHub Wiki Synchronization ==="
+          
+          # Configure commit author for the wiki repository
+          export GIT_AUTHOR_NAME="github-actions[bot]"
+          export GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "${GIT_AUTHOR_NAME}"
+          git config --global user.email "${GIT_AUTHOR_EMAIL}"
+
+          # Construct authenticated wiki URL using GITHUB_TOKEN
+          export WIKI_REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git"
+
+          # Execute the synchronization script
+          if bash scripts/sync_wiki.sh; then
+            echo "Wiki successfully synchronized with remote repository."
+          else
+            STATUS=$?
+            echo "::warning title=Wiki Sync Notice::Wiki sync failed (exit code ${STATUS}). Ensure the GitHub Wiki feature is enabled in repository Settings > Features > Wikis and that at least one initial page has been created via GitHub web UI."
+            exit $STATUS
+          fi

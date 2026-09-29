@@ -58,25 +58,34 @@ if [[ ! -d "${WIKI_DIR}" ]]; then
     exit 1
 fi
 
-# Detect remote URL
-ORIGIN_URL="$(git -C "${REPO_ROOT}" config --get remote.origin.url || true)"
-if [[ -z "${ORIGIN_URL}" ]]; then
-    echo "Error: Could not determine git remote.origin.url." >&2
-    exit 1
+if [[ -z "${WIKI_REMOTE:-}" ]]; then
+    if [[ -n "${WIKI_REMOTE_URL:-}" ]]; then
+        WIKI_REMOTE="${WIKI_REMOTE_URL}"
+    else
+        # Detect remote URL
+        ORIGIN_URL="$(git -C "${REPO_ROOT}" config --get remote.origin.url || true)"
+        if [[ -z "${ORIGIN_URL}" ]]; then
+            echo "Error: Could not determine git remote.origin.url." >&2
+            exit 1
+        fi
+
+        # Construct Wiki remote URL
+        # Example: git@github.com:owner/repo.git -> git@github.com:owner/repo.wiki.git
+        # Example: https://github.com/owner/repo.git -> https://github.com/owner/repo.wiki.git
+        if [[ "${ORIGIN_URL}" =~ ^(.*)\.git$ ]]; then
+            WIKI_REMOTE="${BASH_REMATCH[1]}.wiki.git"
+        else
+            WIKI_REMOTE="${ORIGIN_URL}.wiki.git"
+        fi
+    fi
 fi
 
-# Construct Wiki remote URL
-# Example: git@github.com:owner/repo.git -> git@github.com:owner/repo.wiki.git
-# Example: https://github.com/owner/repo.git -> https://github.com/owner/repo.wiki.git
-if [[ "${ORIGIN_URL}" =~ ^(.*)\.git$ ]]; then
-    WIKI_REMOTE="${BASH_REMATCH[1]}.wiki.git"
-else
-    WIKI_REMOTE="${ORIGIN_URL}.wiki.git"
-fi
+# Mask credentials if present when displaying remote
+SAFE_REMOTE="$(echo "${WIKI_REMOTE}" | sed -E 's/:\/\/[^@]+@/:\/\/***:***@/')"
 
 echo "=== Fresnel GitHub Wiki Sync ==="
 echo "Source: ${WIKI_DIR}"
-echo "Remote: ${WIKI_REMOTE}"
+echo "Remote: ${SAFE_REMOTE}"
 
 if [[ ${FORCE} -eq 1 && -d "${CACHE_DIR}" ]]; then
     echo "[-] Clearing cache directory: ${CACHE_DIR}..."
@@ -146,8 +155,8 @@ echo "Changes detected:"
 git status --short
 
 git add -A
-COMMIT_USER="$(git -C "${REPO_ROOT}" config user.name || echo 'Fresnel Deployer')"
-COMMIT_EMAIL="$(git -C "${REPO_ROOT}" config user.email || echo 'fresnel@users.noreply.github.com')"
+COMMIT_USER="${GIT_AUTHOR_NAME:-$(git -C "${REPO_ROOT}" config user.name 2>/dev/null || echo 'Fresnel Deployer')}"
+COMMIT_EMAIL="${GIT_AUTHOR_EMAIL:-$(git -C "${REPO_ROOT}" config user.email 2>/dev/null || echo 'fresnel@users.noreply.github.com')}"
 
 git -c user.name="${COMMIT_USER}" -c user.email="${COMMIT_EMAIL}" \
     commit -m "docs(wiki): sync wiki documentation from main repository"
