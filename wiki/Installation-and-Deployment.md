@@ -99,9 +99,10 @@ Once deployed, two primary services manage the modem:
 
 ## 🔒 Post-Deployment Verification
 
-1. **Verify Running Processes**:
+1. **Verify Running Processes via SSH**:
+   - **Default Credentials:** Username: `root` • Password: `oelinux123` (Port 22)
    ```bash
-   ssh root@172.16.10.1 "ps -ef | grep -E 'httpd|get_dashboard_data|simpleadmin_daemon' | grep -v grep"
+   ssh root@<modem-ip> "ps -ef | grep -E 'httpd|get_dashboard_data|simpleadmin_daemon' | grep -v grep"
    ```
    You should observe three active processes:
    - `/usrdata/simpleadmin/scripts/simpleadmin_daemon.sh`
@@ -109,7 +110,7 @@ Once deployed, two primary services manage the modem:
    - `httpd -p 8080 -h /usrdata/simpleadmin/www/`
 
 2. **Access Web GUI**:
-   - Open your browser to: **`http://172.16.10.1:8080/login.html`**
+   - Open your browser to: **`http://<modem-ip>:8080/login.html`**
    - Default login password: **`admin`**
    - **Immediately change your password** under the Security tab.
 

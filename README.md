@@ -82,20 +82,25 @@
 
 ### 1. Deploy Suite to Modem
 
-Ensure your computer is connected to the modem's local network (default IP: `172.16.10.1` or `192.168.225.1`):
+Ensure your computer is connected to the modem's network interface (via USB CDC-ECM, RNDIS, or Ethernet bridge).
+
+> [!NOTE]
+> **Default Factory Credentials:**
+> - **SSH Shell (Port 22):** Username: `root` • Password: `oelinux123`
+> - **Web GUI Portal (Port 8080):** Username: `admin` • Password: `admin`
 
 ```bash
 cd modem
 chmod +x deploy_modem.sh
 
 # Standalone deployment (telemetry disabled, 0% cloud overhead):
-./deploy_modem.sh --no-telemetry 172.16.10.1 root
+./deploy_modem.sh --no-telemetry <modem-ip> root
 
 # Or deploy with remote VPS telemetry enabled:
-./deploy_modem.sh --telemetry --telemetry-url "https://modem.yourvps.com:8000" --telemetry-token "your_token" 172.16.10.1 root
+./deploy_modem.sh --telemetry --telemetry-url "https://modem.yourvps.com:8000" --telemetry-token "your_token" <modem-ip> root
 
 # Or simply run without flags for an interactive setup prompt:
-./deploy_modem.sh 172.16.10.1 root
+./deploy_modem.sh <modem-ip> root
 ```
 
 The script will:
@@ -103,7 +108,7 @@ The script will:
 - Deploy the high-performance telemetry daemon and web interface.
 - Configure remote telemetry according to your selection (defaults to disabled/standalone mode with zero background CPU/network overhead).
 - Set up permissions and start supervisor watchdogs.
-- Access the web interface at **`http://172.16.10.1:8080/login.html`** (Default password: `admin`).
+- Access the web interface at **`http://<modem-ip>:8080/login.html`** (Default password: `admin`).
 - Telemetry can be toggled or configured at any time directly in the web GUI under **Network Services & Privacy Suite** or via SSH CLI (`/usrdata/simpleadmin/scripts/telemetry_ctl.sh {status|enable|disable|config}`).
 
 ### 2. Enable Active Queue Management (AQM) for Bufferbloat Elimination
