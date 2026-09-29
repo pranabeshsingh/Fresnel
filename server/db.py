@@ -35,7 +35,6 @@ def init_pool():
 
 @contextlib.contextmanager
 def get_db():
-    global _pool
     if _pool is None:
         init_pool()
     conn = _pool.acquire()

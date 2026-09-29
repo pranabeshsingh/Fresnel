@@ -570,7 +570,7 @@ last_flapping_alert_ts = 0
 recent_handover_timestamps = []
 
 def check_proactive_rf_alerts(sinr_val, enb, cid, now):
-    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps, last_state
+    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps
     
     if sinr_val is not None and -30 < sinr_val < 4.0:
         if now - last_rf_alert_ts > 1800:
@@ -1132,7 +1132,6 @@ def send_periodic_summary():
         return
 
     try:
-        global latest_telemetry_payload
         data = latest_telemetry_payload or {}
 
         dns_total = 0
