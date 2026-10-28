@@ -570,7 +570,7 @@ last_flapping_alert_ts = 0
 recent_handover_timestamps = []
 
 def check_proactive_rf_alerts(sinr_val, enb, cid, now):
-    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps
+    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps, last_state
     
     if sinr_val is not None and -30 < sinr_val < 4.0:
         if now - last_rf_alert_ts > 1800:
@@ -1106,7 +1106,7 @@ def watchdog_worker():
         time.sleep(10)
         now = int(time.time())
         with health_lock:
-            if now - last_heartbeat_ts > 35 and modem_online_status == "online":
+            if now - last_heartbeat_ts > 65 and modem_online_status == "online":
                 modem_online_status = "offline"
                 offline_since_ts = last_heartbeat_ts
                 try:
@@ -1132,6 +1132,7 @@ def send_periodic_summary():
         return
 
     try:
+        global latest_telemetry_payload
         data = latest_telemetry_payload or {}
 
         dns_total = 0
@@ -1844,36 +1845,41 @@ def record_telemetry(data, client_ip=""):
         ))
 
         if enb and enb != "-" and cid and cid != "-":
-            geo = resolve_geo(client_ip)
-            t_lat, t_lon, t_city, t_region = None, None, None, None
-            if geo:
-                t_lat, t_lon = get_tower_coords(geo["lat"], geo["lon"], cid)
-                t_city, t_region = geo["city"], geo["region"]
+            try:
+                geo = resolve_geo(client_ip)
+                t_lat, t_lon, t_city, t_region = None, None, None, None
+                if geo:
+                    t_lat, t_lon = get_tower_coords(geo["lat"], geo["lon"], cid)
+                    t_city, t_region = geo["city"], geo["region"]
 
-            cur.execute("""
-            MERGE INTO tower_history t
-            USING (
-                SELECT :1 AS enb, :2 AS cid, :3 AS lac, :4 AS channel, :5 AS band,
-                       :6 AS first_seen, :7 AS last_seen, :8 AS best_sinr, :9 AS best_rsrp,
-                       :10 AS lat, :11 AS lon, :12 AS city, :13 AS region
-                FROM dual
-            ) s
-            ON (t.enb = s.enb AND t.cid = s.cid)
-            WHEN MATCHED THEN UPDATE SET
-                t.last_seen = s.last_seen,
-                t.count = t.count + 1,
-                t.best_sinr = CASE WHEN t.best_sinr IS NULL OR s.best_sinr > t.best_sinr THEN s.best_sinr ELSE t.best_sinr END,
-                t.best_rsrp = CASE WHEN t.best_rsrp IS NULL OR s.best_rsrp > t.best_rsrp THEN s.best_rsrp ELSE t.best_rsrp END,
-                t.band = s.band,
-                t.channel = s.channel,
-                t.lac = s.lac,
-                t.lat = COALESCE(t.lat, s.lat),
-                t.lon = COALESCE(t.lon, s.lon),
-                t.city = COALESCE(t.city, s.city),
-                t.region = COALESCE(t.region, s.region)
-            WHEN NOT MATCHED THEN INSERT (enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp, lat, lon, city, region)
-            VALUES (s.enb, s.cid, s.lac, s.channel, s.band, s.first_seen, s.last_seen, 1, s.best_sinr, s.best_rsrp, s.lat, s.lon, s.city, s.region)
-            """, (enb, cid, lac, channel, band, now, now, sinr_val, rsrp_val, t_lat, t_lon, t_city, t_region))
+                cur.execute("""
+                MERGE INTO tower_history t
+                USING (
+                    SELECT :1 AS enb, :2 AS cid, :3 AS lac, :4 AS channel, :5 AS band,
+                           CAST(:6 AS NUMBER) AS first_seen, CAST(:7 AS NUMBER) AS last_seen,
+                           CAST(:8 AS BINARY_DOUBLE) AS best_sinr, CAST(:9 AS NUMBER) AS best_rsrp,
+                           CAST(:10 AS NUMBER) AS lat, CAST(:11 AS NUMBER) AS lon,
+                           CAST(:12 AS VARCHAR2(255)) AS city, CAST(:13 AS VARCHAR2(255)) AS region
+                    FROM dual
+                ) s
+                ON (t.enb = s.enb AND t.cid = s.cid)
+                WHEN MATCHED THEN UPDATE SET
+                    t.last_seen = s.last_seen,
+                    t.count = t.count + 1,
+                    t.best_sinr = CASE WHEN t.best_sinr IS NULL OR s.best_sinr > t.best_sinr THEN s.best_sinr ELSE t.best_sinr END,
+                    t.best_rsrp = CASE WHEN t.best_rsrp IS NULL OR s.best_rsrp > t.best_rsrp THEN s.best_rsrp ELSE t.best_rsrp END,
+                    t.band = s.band,
+                    t.channel = s.channel,
+                    t.lac = s.lac,
+                    t.lat = COALESCE(t.lat, s.lat),
+                    t.lon = COALESCE(t.lon, s.lon),
+                    t.city = COALESCE(t.city, s.city),
+                    t.region = COALESCE(t.region, s.region)
+                WHEN NOT MATCHED THEN INSERT (enb, cid, lac, channel, band, first_seen, last_seen, count, best_sinr, best_rsrp, lat, lon, city, region)
+                VALUES (s.enb, s.cid, s.lac, s.channel, s.band, s.first_seen, s.last_seen, 1, s.best_sinr, s.best_rsrp, s.lat, s.lon, s.city, s.region)
+                """, (enb, cid, lac, channel, band, now, now, sinr_val, rsrp_val, t_lat, t_lon, t_city, t_region))
+            except Exception as e:
+                print("Tower history update error:", e)
 
         if client_ip:
             ip_type = "IPv6 Public Egress" if ":" in client_ip else "IPv4 Public Egress"
@@ -2510,7 +2516,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             uptime_s = parse_num(uptime_s)
             
             with health_lock:
-                is_active = 1 if (now - last_heartbeat_ts <= 35 and is_on_val) else 0
+                is_active = 1 if (now - last_heartbeat_ts <= 65 and is_on_val) else 0
                 sec_since = now - last_heartbeat_ts
 
             is_5g = 1 if is_5g_val else 0
