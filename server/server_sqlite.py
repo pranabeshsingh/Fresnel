@@ -552,7 +552,7 @@ def watchdog_worker():
         time.sleep(10)
         now = int(time.time())
         with health_lock:
-            if now - last_heartbeat_ts > 35 and modem_online_status == "online":
+            if now - last_heartbeat_ts > 65 and modem_online_status == "online":
                 modem_online_status = "offline"
                 offline_since_ts = last_heartbeat_ts
                 try:
@@ -1378,7 +1378,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
             uptime_s = parse_num(sys.get("uptime_sec"))
             
             with health_lock:
-                is_active = 1 if (now - last_heartbeat_ts <= 35 and c.get("is_online")) else 0
+                is_active = 1 if (now - last_heartbeat_ts <= 65 and c.get("is_online")) else 0
                 sec_since = now - last_heartbeat_ts
 
             is_5g = 1 if c.get("is_5g") else 0

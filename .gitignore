@@ -29,3 +29,9 @@ gw_sessions/
 
 # Local planning and specs
 docs/superpowers/
+
+# Local agent instructions (not committed)
+AGENTS.md
+agents.md
+
+.commandcode/
