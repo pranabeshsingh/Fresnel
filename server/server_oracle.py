@@ -103,7 +103,8 @@ last_state = {
     "band": None,
     "sinr": None,
     "public_ip": None,
-    "temp_warned": False
+    "temp_warned": False,
+    "last_rf_drop_ts": 0
 }
 
 def parse_pagination(query_str, default_limit=5, max_limit=500):
@@ -570,7 +571,7 @@ last_flapping_alert_ts = 0
 recent_handover_timestamps = []
 
 def check_proactive_rf_alerts(sinr_val, enb, cid, now):
-    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps
+    global last_rf_alert_ts, last_flapping_alert_ts, recent_handover_timestamps, last_state
     
     if sinr_val is not None and -30 < sinr_val < 4.0:
         if now - last_rf_alert_ts > 1800:
@@ -1066,6 +1067,40 @@ def push_uptime_heartbeat(status="up", msg="OK", ping_ms=None):
 
     threading.Thread(target=_send, daemon=True).start()
 
+def clean_carrier_name(raw_name):
+    if not raw_name or raw_name in ("-", "None", "Detecting...", "Cellular"):
+        return "Cellular"
+    name = str(raw_name).strip()
+    nl = name.lower()
+    if "airtel" in nl:
+        return "Airtel 5G" if "5g" in nl else "Airtel"
+    if "jio" in nl:
+        return "Jio 5G" if ("5g" in nl or "true5g" in nl) else "Jio"
+    if "vodafone" in nl or "idea" in nl or "vi" == nl:
+        return "Vi"
+    if "bsnl" in nl:
+        return "BSNL"
+    return name
+
+def get_current_carrier():
+    global latest_telemetry_payload
+    try:
+        if latest_telemetry_payload:
+            prov = latest_telemetry_payload.get("connection", {}).get("provider")
+            if prov and prov not in ("-", "None", "Detecting...", "Cellular"):
+                return clean_carrier_name(prov)
+    except Exception:
+        pass
+    try:
+        with get_db() as (conn, cur):
+            cur.execute("SELECT provider FROM telemetry WHERE provider IS NOT NULL AND provider NOT IN ('-', 'None', 'Detecting...', 'Cellular') ORDER BY id DESC FETCH FIRST 1 ROWS ONLY")
+            row = cur.fetchone()
+            if row and row[0]:
+                return clean_carrier_name(row[0])
+    except Exception:
+        pass
+    return "Cellular"
+
 def trigger_telegram_alert(title, msg, severity="info"):
     token = get_setting("telegram_bot_token")
     chat_id = get_setting("telegram_chat_id")
@@ -1074,8 +1109,9 @@ def trigger_telegram_alert(title, msg, severity="info"):
 
     def _send():
         try:
+            carrier = get_current_carrier()
             emoji = "ℹ️" if severity == "info" else ("⚠️" if severity == "warning" else "🚨")
-            text = f"{emoji} *Jio 5G Alert: {title}*\n\n{msg}\n\n_Time: {time.strftime('%Y-%m-%d %H:%M:%S IST', time.localtime())}_"
+            text = f"{emoji} *{carrier} Alert: {title}*\n\n{msg}\n\n_Time: {time.strftime('%Y-%m-%d %H:%M:%S IST', time.localtime())}_"
             url = f"https://api.telegram.org/bot{token}/sendMessage"
             payload = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "Markdown", "disable_notification": True}).encode("utf-8")
             req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
@@ -1272,8 +1308,9 @@ def send_periodic_summary():
 
         now_str = datetime.datetime.now(IST_TZ).strftime("%Y-%m-%d %H:%M:%S IST")
 
+        carrier_title = clean_carrier_name(prov)
         lines = [
-            "📊 *Jio 5G Modem • 15-Minute Status Report*",
+            f"📊 *{carrier_title} Modem • 15-Minute Status Report*",
             "",
             "📶 *Network & Cellular:*",
             f"• Provider: *{prov}* ({net_type}) • Band: *{bands}*",
@@ -1993,9 +2030,16 @@ def record_telemetry(data, client_ip=""):
         if last_state["band"] is not None and band != "-" and band != last_state["band"]:
             severity = "warning" if "28" in band or "LTE" in band else "info"
             log_alert("band_change", severity, "Band Handover", f"Connection band switched from {last_state['band']} to {band}")
-        if sinr_val is not None and sinr_val < 8.0:
-            if last_state["sinr"] is None or last_state["sinr"] >= 8.0:
-                log_alert("rf_drop", "warning", "RF Signal Degradation", f"SINR dropped to {sinr_val} dB (RSRP: {rsrp_val} dBm)")
+        # RF degradation alert with rate-limiting and hysteresis
+        # Threshold set to < 4.0 dB (significant degradation) with 30-min cooldown
+        if sinr_val is not None and -30 < sinr_val < 4.0:
+            if now - last_state.get("last_rf_drop_ts", 0) > 1800:
+                last_state["last_rf_drop_ts"] = now
+                log_alert("rf_drop", "warning", "RF Signal Degradation", f"SINR dropped to {sinr_val} dB (RSRP: {rsrp_val} dBm). Cell-edge or high interference condition.")
+        elif sinr_val is not None and sinr_val >= 7.0:
+            # Reset cooldown when signal recovers to good quality
+            if last_state.get("last_rf_drop_ts", 0) > 0 and (now - last_state["last_rf_drop_ts"]) > 300:
+                last_state["last_rf_drop_ts"] = 0
         if last_state["public_ip"] is not None and public_ip != last_state["public_ip"]:
             log_alert("ip_rotation", "info", "Public IP Rotated", f"New active carrier egress IP: {public_ip}")
         
@@ -2449,7 +2493,7 @@ class TelemetryHandler(http.server.SimpleHTTPRequestHandler):
                     set_setting("telegram_bot_token", cfg["telegram_bot_token"].strip())
                 if "telegram_chat_id" in cfg:
                     set_setting("telegram_chat_id", cfg["telegram_chat_id"].strip())
-                trigger_telegram_alert("Telegram Connected", "Your Jio 5G Modem VPS cloud notification bot is now connected and operational!", "info")
+                trigger_telegram_alert("Telegram Connected", "Your 5G Modem VPS cloud notification bot is now connected and operational!", "info")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
