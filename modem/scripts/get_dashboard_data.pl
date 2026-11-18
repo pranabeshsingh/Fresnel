@@ -1086,8 +1086,32 @@ sub sample_and_emit {
     }
 
     my $telemetry_running = 0;
-    if (system("pgrep -f telemetry_pusher.sh >/dev/null 2>&1") == 0) {
-        $telemetry_running = 1;
+    my $tel_pid_file = "/tmp/telemetry_pusher.pid";
+    if (-f $tel_pid_file && open(my $pf, "<", $tel_pid_file)) {
+        my $p = <$pf>;
+        close($pf);
+        if ($p && $p =~ /^(\d+)/) {
+            my $pid = $1;
+            if (kill(0, $pid) && -d "/proc/$pid") {
+                $telemetry_running = 1;
+            }
+        }
+    }
+    if (!$telemetry_running) {
+        if (opendir(my $dh, "/proc")) {
+            while (my $entry = readdir($dh)) {
+                next unless $entry =~ /^\d+$/;
+                if (open(my $cf, "<", "/proc/$entry/cmdline")) {
+                    my $cmd = <$cf>;
+                    close($cf);
+                    if ($cmd && $cmd =~ /telemetry_pusher/) {
+                        $telemetry_running = 1;
+                        last;
+                    }
+                }
+            }
+            closedir($dh);
+        }
     }
 
     my $telemetry_url = "";
