@@ -217,8 +217,9 @@ our $sim_auto_unlock_failed = 0;
 
 sub poll_disk_usage {
     my ($now) = @_;
-    return if ($now - $mem_last_disk_poll < 30);
-    $mem_last_disk_poll = $now;
+    my $u = get_precise_uptime();
+    return if ($u - $mem_last_disk_poll < 30 && $u >= $mem_last_disk_poll);
+    $mem_last_disk_poll = $u;
     if (open(my $df_pipe, "df -k /data 2>/dev/null |")) {
         my $hdr = <$df_pipe>;
         my $line = <$df_pipe>;
@@ -443,7 +444,8 @@ sub sample_and_emit {
     $mem_usage_cache{speed_tx_bps} = $speed_tx_bps;
 
     # Flush to flash every 60s
-    if ($now - $mem_last_disk_flush >= 60) {
+    if ($cur_uptime - $mem_last_disk_flush >= 60 || $cur_uptime < $mem_last_disk_flush) {
+        $mem_last_disk_flush = $cur_uptime;
         flush_usage_to_disk($now);
     }
 
@@ -797,8 +799,8 @@ sub sample_and_emit {
         }
     }
 
-    if ($now - $last_ping_poll > 10) {
-        $last_ping_poll = $now;
+    if ($cur_uptime - $last_ping_poll > 10 || $cur_uptime < $last_ping_poll) {
+        $last_ping_poll = $cur_uptime;
         my $p_pid = fork();
         if (defined $p_pid && $p_pid == 0) {
             my $measure_fn = sub {
@@ -826,15 +828,15 @@ sub sample_and_emit {
     }
 
     # 8. RF / AT Telemetry (Polled every 3s)
-    if ($now - $last_rf_poll >= 3) {
-        $last_rf_poll = $now;
+    if ($cur_uptime - $last_rf_poll >= 3 || $cur_uptime < $last_rf_poll) {
+        $last_rf_poll = $cur_uptime;
         my $cops_out   = run_at_direct("AT+COPS?");
         my $csq_out    = run_at_direct("AT+CSQ");
         my $cesq_out   = run_at_direct("AT+CESQ");
         my $cereg_out  = run_at_direct("AT+CEREG=2;+CEREG?;+CEREG=0");
         my $cpin_out   = run_at_direct("AT+CPIN?");
-        my $nrca_out   = ($now % 6 == 0 || !$rf{nr5g_band}) ? run_at_direct("AT+NRCAINFO") : "";
-        my $qrsrp_out  = ($now % 6 == 0 || !$rf{lte_band}) ? run_at_direct('AT$QCRSRP?') : "";
+        my $nrca_out   = (int($cur_uptime) % 6 == 0 || !$rf{nr5g_band}) ? run_at_direct("AT+NRCAINFO") : "";
+        my $qrsrp_out  = (int($cur_uptime) % 6 == 0 || !$rf{lte_band}) ? run_at_direct('AT$QCRSRP?') : "";
 
         my $cops_act = "";
         if ($cops_out =~ /\+COPS:\s*\d+,\d+,"([^"]+)",?(\d+)?/) {
@@ -851,7 +853,7 @@ sub sample_and_emit {
         }
 
         # Query dynamic APN & dynamic IPv4 from network
-        if ($rf{apn} eq "--" || $rf{apn} eq "jionet" || $now % 15 == 0) {
+        if ($rf{apn} eq "--" || $rf{apn} eq "jionet" || int($cur_uptime) % 15 == 0) {
             my $apn_out = run_at_direct("AT+CGCONTRDP");
             if ($apn_out =~ /\+CGCONTRDP:\s*\d+,\d+,([^,\s\r\n]+)/) {
                 $rf{apn} = $1;
@@ -889,6 +891,11 @@ sub sample_and_emit {
                 my $v = $nr_rsrp_idx - 156;
                 $rf{nr_rsrp_str} = "$v dBm";
                 $rf{rsrp_str} = "$v dBm";
+                $has_nr = 1;
+            }
+            if (defined $nr_rsrq_idx && $nr_rsrq_idx != 255) {
+                my $v = ($nr_rsrq_idx * 0.5) - 43;
+                $rf{rsrq_str} = sprintf("%.1f dB", $v);
                 $has_nr = 1;
             }
             if (defined $nr_sinr_idx && $nr_sinr_idx != 255) {
@@ -980,8 +987,8 @@ sub sample_and_emit {
         }
 
         # Query SIM Security Status every 10s (or when not READY)
-        if ($now - $last_sim_sec_poll >= 10 || $rf{sim_status} ne "READY") {
-            $last_sim_sec_poll = $now;
+        if ($cur_uptime - $last_sim_sec_poll >= 10 || $cur_uptime < $last_sim_sec_poll || $rf{sim_status} ne "READY") {
+            $last_sim_sec_poll = $cur_uptime;
             my $clck_out = run_at_direct('AT+CLCK="SC",2');
             if ($clck_out =~ /\+CLCK:\s*1/) {
                 $sim_pin_lock_enabled = 1;
