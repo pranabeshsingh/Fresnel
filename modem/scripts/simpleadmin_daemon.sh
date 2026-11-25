@@ -95,8 +95,41 @@ killall -SIGHUP dnsmasq 2>/dev/null || true
 killall -9 AdGuardHome 2>/dev/null || true
 pkill -9 -f 'telegram_bot.pl' 2>/dev/null || true
 
+# 7.5. Cellular WAN Backhaul Watchdog
+check_cellular_wan() {
+    # If default route exists, nothing to do
+    if ip route show 2>/dev/null | grep -q '^default'; then
+        return 0
+    fi
+
+    # Clear stale AT PDP lock if present
+    perl -e '
+        use strict; use warnings; use Fcntl qw(:flock O_RDONLY O_WRONLY);
+        open(my $lf, ">", "/tmp/smd7.lock") or exit(0);
+        flock($lf, LOCK_EX);
+        pipe(my $r, my $w);
+        my $pid = fork();
+        if ($pid == 0) {
+            close $r; sysopen(my $fh, "/dev/smd7", O_RDONLY) or exit(1);
+            my $buf;
+            eval { local $SIG{ALRM} = sub { die }; alarm(2); sysread($fh, $buf, 256); alarm(0); };
+            exit(0);
+        }
+        close $w; select(undef, undef, undef, 0.05);
+        if (sysopen(my $wh, "/dev/smd7", O_WRONLY)) { syswrite($wh, "AT+CGACT=0,1\r\n"); close($wh); }
+        close $r; waitpid($pid, 0); flock($lf, LOCK_UN); close($lf);
+    ' 2>/dev/null
+
+    # Trigger QCMAP WWAN network backhaul connection
+    timeout -t 8 /usr/bin/QCMAP_CLI enable_qcmap_network >/dev/null 2>&1
+}
+check_cellular_wan
+
 # 8. Background Supervisor Watchdog (Every 10s)
 while true; do
+    # Keep cellular WAN connection alive
+    check_cellular_wan
+
     # Keep httpd alive
     if ! pgrep -f 'httpd.*8080' >/dev/null; then
         /bin/busybox.nosuid httpd -f -h /usrdata/simpleadmin/www -p 8080 &
